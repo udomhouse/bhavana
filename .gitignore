@@ -1,0 +1,17 @@
+node_modules/
+www/fonts/
+.DS_Store
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.keystore
+*.jks
+keystore.properties
+# iOS
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+xcuserdata/
