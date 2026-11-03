@@ -22,12 +22,18 @@ import sherpa_onnx
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'www', 'audio')
 
-# voice style: TTS speed (lower = slower), silence after each line (s), pitch factor (<1 = deeper)
+# One speaker for everything. Styles differ only in pace, pauses and room echo — never pitch —
+# so the app always sounds like the same person.
+#   speed: TTS speed (lower = slower) · gap: silence after each line (s)
+#   phrases: synthesize each space-separated Thai phrase on its own, with phrase_gap between them
 VOICES = {
-    'lay':   dict(speed=0.82, gap=0.55, pitch=1.0,  echo=False),
-    'monk':  dict(speed=0.70, gap=0.75, pitch=0.80, echo=True),
-    'topic': dict(speed=0.95, gap=0.70, pitch=1.0,  echo=False),
+    'lay':   dict(speed=0.82, gap=0.55, pitch=1.0, echo=False, phrases=False),
+    'monk':  dict(speed=0.72, gap=0.80, pitch=1.0, echo=True,  phrases=False),
+    'topic': dict(speed=0.92, gap=0.75, pitch=1.0, echo=False, phrases=True, phrase_gap=0.24),
 }
+# Lower randomness than the model default (0.667 / 0.8) keeps the voice steady from clip to clip.
+NOISE_SCALE, NOISE_SCALE_W = 0.35, 0.45
+TARGET_RMS = 0.07
 
 THAI_DIGITS = str.maketrans('๐๑๒๓๔๕๖๗๘๙', '0123456789')
 UNITS = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า']
@@ -63,19 +69,49 @@ def load_texts():
     js = subprocess.run(['node', os.path.join(ROOT, 'scripts', 'export-texts.mjs')], capture_output=True, text=True, check=True)
     return json.loads(js.stdout)
 
+def phrases_of(line):
+    """Split at the spaces Thai writing uses between clauses; glue very short tokens to the next one.
+    Returns [(first_word_index, text)] where word indexes match the app's split on whitespace."""
+    words = line.split()
+    out, cur, start = [], [], 0
+    for i, w in enumerate(words):
+        if not cur:
+            start = i
+        cur.append(w)
+        if len(normalize(' '.join(cur))) > 3 or i == len(words) - 1:
+            out.append((start, ' '.join(cur)))
+            cur = []
+    return out
+
+def clean(samples, sr):
+    """Trim edge silence and bring every clip to the same loudness."""
+    x = np.asarray(samples, dtype=np.float32)
+    env = np.convolve(np.abs(x), np.ones(160) / 160, mode='same')
+    idx = np.where(env > 0.01)[0]
+    if len(idx):
+        x = x[max(0, idx[0] - int(0.03 * sr)): idx[-1] + int(0.06 * sr)]
+    rms = float(np.sqrt(np.mean(x ** 2))) or 1.0
+    return np.clip(x * (TARGET_RMS / rms), -0.98, 0.98)
+
 def synth_lines(tts, lines, v):
     sr = tts.sample_rate
-    gap = np.zeros(int(sr * v['gap']), dtype=np.float32)
-    chunks, cues, t = [np.zeros(int(sr * 0.3), dtype=np.float32)], [], 0.3
+    sil = lambda sec: np.zeros(int(sr * sec), dtype=np.float32)
+    chunks, cues, anchors, t = [sil(0.3)], [], [], 0.3
     for line in lines:
         if line.startswith('~'):
             continue
-        audio = tts.generate(normalize(line), sid=0, speed=v['speed'])
-        samples = np.asarray(audio.samples, dtype=np.float32)
         cues.append(round(t, 2))
-        chunks += [samples, gap]
-        t += (len(samples) + len(gap)) / sr
-    return np.concatenate(chunks), sr, cues
+        parts = phrases_of(line) if v['phrases'] else [(0, line)]
+        line_anchors = []
+        for n, (wi, text) in enumerate(parts):
+            audio = tts.generate(normalize(text), sid=0, speed=v['speed'])
+            x = clean(audio.samples, sr)
+            line_anchors.append([wi, round(t, 2)])
+            pause = sil(v['gap'] if n == len(parts) - 1 else v['phrase_gap'])
+            chunks += [x, pause]
+            t += (len(x) + len(pause)) / sr
+        anchors.append(line_anchors if v['phrases'] else [])
+    return np.concatenate(chunks), sr, cues, anchors
 
 def encode(wav_path, mp3_path, v, sr):
     filters = []
@@ -83,7 +119,7 @@ def encode(wav_path, mp3_path, v, sr):
         filters += [f"asetrate={int(sr * v['pitch'])}", f'aresample={sr}', f"atempo={1 / v['pitch']:.4f}"]
     if v['echo']:           # a little hall reverb
         filters += ['aecho=0.8:0.6:60|120:0.25|0.15']
-    filters += ['loudnorm=I=-18:TP=-2:LRA=11']
+    filters += ['loudnorm=I=-18:TP=-2:LRA=7']
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav_path, '-af', ','.join(filters),
                     '-ac', '1', '-ar', '22050', '-c:a', 'libmp3lame', '-b:a', '40k', mp3_path], check=True)
 
@@ -94,7 +130,8 @@ def main():
     args = ap.parse_args()
     tts = sherpa_onnx.OfflineTts(sherpa_onnx.OfflineTtsConfig(model=sherpa_onnx.OfflineTtsModelConfig(
         vits=sherpa_onnx.OfflineTtsVitsModelConfig(model=os.path.join(args.model, 'model.onnx'),
-                                                    tokens=os.path.join(args.model, 'tokens.txt')),
+                                                    tokens=os.path.join(args.model, 'tokens.txt'),
+                                                    noise_scale=NOISE_SCALE, noise_scale_w=NOISE_SCALE_W),
         num_threads=os.cpu_count() or 2)))
     os.makedirs(OUT, exist_ok=True)
     man_path = os.path.join(OUT, 'manifest.json')
@@ -106,10 +143,10 @@ def main():
     for key, lines, voices in jobs:
         if only and key not in only and key.replace('topic:', '') not in only:
             continue
-        entry = {'cues': {}}
+        entry = {'cues': {}, 'words': {}}
         for vname in voices:
             v = VOICES[vname]
-            samples, sr, cues = synth_lines(tts, lines, v)
+            samples, sr, cues, anchors = synth_lines(tts, lines, v)
             slot = 'lay' if vname == 'topic' else vname
             fname = (key.replace(':', '-') + '.mp3') if vname == 'topic' else f'{key}-{vname}.mp3'
             with tempfile.NamedTemporaryFile(suffix='.wav') as tmp:
@@ -117,7 +154,11 @@ def main():
                 encode(tmp.name, os.path.join(OUT, fname), v, sr)
             entry[slot] = fname
             entry['cues'][slot] = cues
+            if any(anchors):
+                entry['words'][slot] = anchors
             print(f'{fname:32s} {len(samples) / sr:6.1f}s  {len(cues)} lines', flush=True)
+        if not entry['words']:
+            del entry['words']
         manifest[key] = entry
     manifest['_readme'] = 'สร้างโดย scripts/generate_audio.py (เสียงสังเคราะห์ MMS-TTS Thai, CC-BY-NC 4.0) · ใส่ไฟล์เสียงอัดจริงแทนได้ ดู README.md'
     json.dump(manifest, open(man_path, 'w', encoding='utf8'), ensure_ascii=False, indent=1)

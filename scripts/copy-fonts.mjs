@@ -19,5 +19,11 @@ for (const [family, pkg, weights, style, subsets] of faces) {
     css += `@font-face{font-family:"${family}";font-style:${style};font-weight:${w};font-display:swap;src:url(${file}) format("woff2");unicode-range:${range}}\n`;
   }
 }
+// ChulaNarak (TEPC freeware): copied unchanged as .ttf — its licence does not allow converting the file
+for (const [file, w] of [['ChulaNarak-Regular.ttf', 400], ['ChulaNarak-Bold.ttf', 700]]) {
+  copyFileSync(`fonts-src/chulanarak/${file}`, `${OUT}/${file}`);
+  css += `@font-face{font-family:"ChulaNarak";font-style:normal;font-weight:${w};font-display:swap;src:url(${file}) format("truetype")}\n`;
+}
+copyFileSync('fonts-src/chulanarak/LICENSE.txt', `${OUT}/ChulaNarak-LICENSE.txt`);
 writeFileSync(`${OUT}/fonts.css`, css);
 console.log('fonts copied to', OUT);

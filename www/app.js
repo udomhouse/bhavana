@@ -336,21 +336,30 @@ function clearTimers(){for(const k in TM){clearTimeout(TM[k]);delete TM[k]}}
 let speakTok=0,curAudio=null;
 function hush(){speakTok++;clearTimers();if(synth){try{synth.cancel()}catch(e){}}if(window.NATIVE)NATIVE.stop();if(curAudio){curAudio.pause();curAudio=null}}
 /* recorded chant audio: www/audio/manifest.json maps a chant id to files per voice (see README) */
-function recFor(it){const A=window.AUDIO;if(!A||!it)return null;const e=A[it.topic?'topic:'+it.topic:it.id];if(!e)return null;const v=it.topic?'lay':S.settings.voice;if(!e[v])return null;return{src:'audio/'+e[v],cues:e.cues&&e.cues[v]}}
-function playRecorded(rec){
+function recFor(it){const A=window.AUDIO;if(!A||!it)return null;const e=A[it.topic?'topic:'+it.topic:it.id];if(!e)return null;const v=it.topic?'lay':S.settings.voice;if(!e[v])return null;return{src:'audio/'+e[v],cues:e.cues&&e.cues[v],words:e.words&&e.words[v]}}
+function playRecorded(rec,startLi){
   const it=P.items[P.ci],reps=it.reps||1;
   const spoken=P.lines.map((l,i)=>l.note?-1:i).filter(i=>i>=0);const per=Math.max(1,Math.round(spoken.length/reps));
+  let pos=spoken.findIndex(i=>i>=(startLi||0));if(pos<0)pos=0;let rep=Math.floor(pos/per);const k0=pos%per;
   const wts=spoken.slice(0,per).map(i=>P.lines[i].w.reduce((s,x)=>s+x.syl,0)+1);const tot=wts.reduce((a,b)=>a+b,0);
-  let rep=0;const a=new Audio(rec.src);a.preservesPitch=true;a.playbackRate=S.settings.speed;curAudio=a;stopDrone();stopMusic();
+  const a=new Audio(rec.src);a.preservesPitch=true;a.playbackRate=S.settings.speed;curAudio=a;stopDrone();stopMusic();
+  if(k0>0&&rec.cues)a.addEventListener('loadedmetadata',()=>{try{a.currentTime=rec.cues[k0]}catch(e){}},{once:true});
+  const wordAt=(ws,from,to,t0,t1)=>{const sub=ws.slice(from,to);const tw=sub.reduce((x,w)=>x+w.syl,0)||1;const fr=Math.max(0,(a.currentTime-t0)/Math.max(.2,t1-t0));let acc=0,j=0;for(;j<sub.length-1;j++){acc+=sub[j].syl;if(acc/tw>fr)break}return from+j};
   a.ontimeupdate=()=>{if(curAudio!==a||!a.duration)return;let k=0;
     if(rec.cues){while(k+1<rec.cues.length&&a.currentTime>=rec.cues[k+1])k++}
     else{const f=a.currentTime/a.duration*tot;let acc=0;for(;k<wts.length-1;k++){acc+=wts[k];if(acc>f)break}}
     const li=spoken[Math.min(spoken.length-1,rep*per+k)];if(li!==P.li){P.li=li;hilite()}
-    if(rec.cues){const st=rec.cues[k],en=k+1<rec.cues.length?rec.cues[k+1]-.5:a.duration-.4;const fr=Math.max(0,(a.currentTime-st)/Math.max(.3,en-st));const ws=P.lines[li].w;const tw=ws.reduce((x,w)=>x+w.syl,0);let acc=0,wi=0;for(;wi<ws.length-1;wi++){acc+=ws[wi].syl;if(acc/tw>fr)break}setWord(fr>=1?ws.length:wi)}};
+    if(!rec.cues)return;
+    const ws=P.lines[li].w,st=rec.cues[k],en=k+1<rec.cues.length?rec.cues[k+1]-.5:a.duration-.4;const an=rec.words&&rec.words[k];
+    if(an&&an.length){let g=0;while(g+1<an.length&&a.currentTime>=an[g+1][1])g++;
+      const last=g===an.length-1;const t1=last?en:an[g+1][1]-.2;if(last&&a.currentTime>=en)return setWord(ws.length);
+      setWord(wordAt(ws,an[g][0],last?ws.length:an[g+1][0],an[g][1],t1))}
+    else setWord(a.currentTime>=en?ws.length:wordAt(ws,0,ws.length,st,en))};
   a.onended=()=>{if(curAudio!==a)return;rep++;if(rep<reps){a.currentTime=0;a.play().catch(()=>{})}else{curAudio=null;P.li=P.lines.length;step()}};
   const fail=()=>{if(curAudio!==a)return;curAudio=null;P.recFail=1;step()};
   a.onerror=fail;a.play().catch(fail);
 }
+
 function stopAll(){hush();stopDrone();stopMusic();if(P)P.playing=false}
 function play(){if(!P)return;P.playing=true;if(window.NATIVE)NATIVE.keepAwake();if(curAudio){curAudio.play().catch(()=>{});updatePlayerUI();return}const mode=P.story?'lay':S.settings.voice;
   if(mode==='monk')startDrone('drone');if(mode==='music')startMusic();
@@ -363,8 +372,8 @@ function step(){
   if(P.li>=P.lines.length){return nextChant(true)}
   const ln=P.lines[P.li];hilite();
   const mode=P.story?'lay':S.settings.voice;const sp=S.settings.speed;
-  const rec=P.li===0&&mode!=='music'&&!P.recFail&&recFor(P.items[P.ci]);
-  if(rec)return playRecorded(rec);
+  const rec=mode!=='music'&&!P.recFail&&recFor(P.items[P.ci]);
+  if(rec)return playRecorded(rec,P.li);
   const adv=()=>{if(!P||!P.playing)return;clearTimers();P.li++;step()};
   if(ln.note){TM.n=setTimeout(adv,1100/sp);return}
   const words=ln.w;const perSyl=(P.story?260:480)/sp; // ms per syllable — slow, chant-like
@@ -396,7 +405,7 @@ function step(){
   TM.s=setTimeout(()=>{if(!started)noVoice()},2500);
   TM.g=setTimeout(()=>{if(!ended){ended=true;adv()}},total*3+6000);
 }
-function updateWarn(){const w=$('#vwarn');if(!w||!P)return;const needVoice=P.story||S.settings.voice!=='music';
+function updateWarn(){const w=$('#vwarn');if(!w||!P)return;const needVoice=(P.story||S.settings.voice!=='music')&&!recFor(P.items[P.ci]);
   if(needVoice&&ttsOK===false){w.hidden=false;w.innerHTML=(window.NATIVE&&NATIVE.platform==='android'?'<button class="btn sm" data-act="installTTS" style="margin-bottom:6px">ติดตั้งเสียงภาษาไทย</button><br>':'')+'อุปกรณ์นี้ยังไม่มีเสียงอ่านภาษาไทย แอปจะไล่ข้อความทีละคำให้สวดตามช้า ๆ · เปิดเสียงไทยได้ที่ การตั้งค่าเครื่อง › การช่วยการเข้าถึง › เนื้อหาที่พูด (iPhone) หรือ เอาต์พุตการอ่านออกเสียง (Android)'}else w.hidden=true}
 function nextChant(auto){if(!P)return;hush();
   if(auto&&P.items[P.ci].id){const d=ymd(new Date());S.chantDays=S.chantDays||{};S.chantDays[d]=(S.chantDays[d]||0)+1;save()}
@@ -416,7 +425,7 @@ function openPlayer(){if(!P)return;P.open=true;const o=$('#overlay');o.innerHTML
   <div class="prog" id="prog"><i></i></div>
   <div class="row"><button class="cbtn" data-act="prev" aria-label="บทก่อนหน้า">${ic('prev')}</button><button class="cbtn play" id="pPlay" data-act="toggle" aria-label="เล่น/หยุด"></button><button class="cbtn" data-act="next" aria-label="บทถัดไป">${ic('next')}</button></div>
   <div class="row2">
-   <div class="seg" role="group" aria-label="เสียง" id="voiceSeg">${[['lay','เสียงฆราวาส'],['monk','เสียงพระสวด'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
+   <div class="seg" role="group" aria-label="เสียง" id="voiceSeg">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
    <label class="ctl" for="spd">ความเร็ว <input id="spd" type="range" min="0.5" max="1.6" step="0.1" value="${S.settings.speed}"><b id="spdv">${S.settings.speed.toFixed(1)}×</b></label>
    <label class="ctl" for="fsz">ตัวอักษร <input id="fsz" type="range" min="16" max="40" step="1" value="${S.settings.fs}"></label>
   </div>
@@ -445,7 +454,7 @@ function renderMini(){const m=$('#mini');if(!P||P.open){m.hidden=true;return}m.h
   m.className='mini';m.innerHTML=`<div class="thumb"></div><button class="main" data-act="openPlayer"><b>${esc(titleOf(it))}</b><span>${esc(P.title)}</span></button><button class="pb" data-act="toggle" aria-label="เล่น/หยุด">${ic(P.playing?'pause':'play')}</button><button class="pb" data-act="next" aria-label="ถัดไป">${ic('next')}</button>`}
 
 /* ============ views ============ */
-const TABS=[['home','หน้าหลัก','home'],['browse','เลือกดู','browse'],['playlists','เพลย์ลิสต์','list'],['favourite','รายการโปรด','heart'],['radio','วิทยุ','radio'],['meditation','ห้องสมาธิ','med']];
+const TABS=[['home','หน้าหลัก','home'],['browse','เลือกดู','browse'],['playlists','Praylist','list'],['favourite','รายการโปรด','heart'],['radio','วิทยุ','radio'],['meditation','ห้องสมาธิ','med']];
 let pendingSub=null;
 function goSub(view,sb){if(curView===view){sub=sb;renderView();window.scrollTo(0,0)}else{pendingSub=sb;location.hash=view}}
 let curView='home',sub=null,mood=null,query='',tagF=null,calM=null;
@@ -463,7 +472,7 @@ function albumHTML(set){return `<button class="album" data-act="openSet" data-id
 function chantRow(it,opts={}){const c=C[it.id];const fav=S.favs.includes(c.id);
   return `<div class="rowi"><div class="thumb" style="background:${grad(c.o%6)}">${(c.t.replace(/^(บทสวด|พระคาถา|บท|คำ)/,'').match(/[ก-ฮ]/)||['ธ'])[0]}</div>
   <button class="main" data-act="playOne" data-id="${c.id}" data-reps="${it.reps||c.defReps||1}"><b>${esc(c.t)}${it.reps>1?` <span class="muted" style="display:inline;font-weight:400">× ${it.reps} จบ</span>`:''}</b><span>${esc(c.p)} · ${fmtMin(itemMin(it))}${opts.tags?' · '+c.tags.slice(0,3).join(' · '):''}</span></button>
-  <div class="act"><button data-act="fav" data-id="${c.id}" class="${fav?'on':''}" aria-label="รายการโปรด">${ic(fav?'heartf':'heart')}</button>${opts.add!==false?`<button data-act="addTo" data-id="${c.id}" aria-label="เพิ่มในเพลย์ลิสต์">${ic('plus')}</button>`:''}</div></div>`}
+  <div class="act"><button data-act="fav" data-id="${c.id}" class="${fav?'on':''}" aria-label="รายการโปรด">${ic(fav?'heartf':'heart')}</button>${opts.add!==false?`<button data-act="addTo" data-id="${c.id}" aria-label="เพิ่มใน Praylist">${ic('plus')}</button>`:''}</div></div>`}
 function stagedList(items){let last='',h='';for(const it of items){const st=stageOf(C[it.id].o);if(st!==last){h+=`<div class="stage">${st}</div>`;last=st}h+=chantRow(it,{})}return `<div class="list">${h}</div>`}
 
 function vHome(){
@@ -528,7 +537,7 @@ function vBrowse(){
 function resultsBlock(){return `<div class="sechead"><h2 class="sec">ผลการค้นหา</h2>${tagF?`<span class="more">${esc(TAGS.find(t=>t.k===tagF).d)}</span>`:''}</div>${searchHTML()}`}
 function back(){return `<button class="back" data-act="back">${ic('left')} ย้อนกลับ</button>`}
 function vSet(id){const s=SETS.find(x=>x.id===id);const items=sortItems(s.items.map(i=>({id:i})));
-  return `${back()}<div style="display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap"><div class="art" style="width:min(180px,44vw);background:${grad(s.hue)}">${motif(s.hue)}</div><div style="min-width:0;flex:1"><div class="eyebrow">ชุดบทสวด · ${esc(s.s)}</div><h1 class="big">${esc(s.t)}</h1><p class="muted" style="margin:0 0 12px">${items.length} บท · ประมาณ ${fmtMin(totalMin(items))}</p><div class="hstack"><button class="btn" data-act="playSet" data-id="${s.id}">${ic('play')} สวดทั้งชุด</button><button class="btn ghost" data-act="copySet" data-id="${s.id}">${ic('plus')} คัดลอกเป็นเพลย์ลิสต์</button></div></div></div>
+  return `${back()}<div style="display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap"><div class="art" style="width:min(180px,44vw);background:${grad(s.hue)}">${motif(s.hue)}</div><div style="min-width:0;flex:1"><div class="eyebrow">ชุดบทสวด · ${esc(s.s)}</div><h1 class="big">${esc(s.t)}</h1><p class="muted" style="margin:0 0 12px">${items.length} บท · ประมาณ ${fmtMin(totalMin(items))}</p><div class="hstack"><button class="btn" data-act="playSet" data-id="${s.id}">${ic('play')} สวดทั้งชุด</button><button class="btn ghost" data-act="copySet" data-id="${s.id}">${ic('plus')} คัดลอกเป็น Praylist</button></div></div></div>
   ${stagedList(items)}`}
 function vTeacher(id){const t=TE[id];return `${back()}<div class="teacher"><div class="avatar" style="background:${grad(t.h)}">${esc(t.n.replace(/^(หลวงพ่อ|พระ)/,'').charAt(0))}</div><div style="min-width:0"><div class="eyebrow">พระอาจารย์</div><h1 class="big" style="font-size:26px">${esc(t.n)}</h1><div class="muted small">${esc(t.f)} · ${esc(t.w)}</div></div></div>
   <p class="prose" style="margin-top:14px">${esc(t.d)}</p>
@@ -546,13 +555,13 @@ function vTopic(id){const t=T[id];const fav=S.favTopics.includes(id);const mode=
 
 function vPlaylists(){
   if(sub&&sub.type==='pl')return vPl(sub.id);
-  return `<div class="topbar"><h1 class="big">เพลย์ลิสต์</h1><button class="btn" data-act="newPl">${ic('plus')} สร้างใหม่</button></div>
+  return `<div class="topbar"><div><h1 class="big">Praylist</h1><p class="muted" style="margin:0">Pray + Playlist · ชุดบทสวดของคุณเอง</p></div><button class="btn" data-act="newPl">${ic('plus')} สร้างใหม่</button></div>
   <div class="card" style="margin-top:14px"><b>จัดบทสวดตามเวลา</b><div class="muted small" style="margin-bottom:10px">เลือกเวลาที่มี แอปจะเลือกบทและเรียงลำดับขั้นการสวดให้</div>
    <div class="chips">${[5,10,15,20,30].map(n=>`<button class="chip" data-act="time" data-n="${n}">${n} นาที</button>`).join('')}</div></div>
   <div class="sechead"><h2 class="sec">ของฉัน</h2></div>
-  ${S.playlists.length?`<div class="grid">${S.playlists.map((p,i)=>`<button class="album" data-act="openPl" data-id="${p.id}"><div class="art" style="background:${grad(i+2)}">${motif(i+3)}<span class="lbl">${esc(p.name)}</span></div><div class="t">${esc(p.name)}</div><div class="s">${p.items.length} บท · ${fmtMin(totalMin(p.items))}</div></button>`).join('')}</div>`:`<div class="empty"><b>ยังไม่มีเพลย์ลิสต์</b>กด “สร้างใหม่” แล้วเลือกบทสวดที่ต้องการ</div>`}`}
+  ${S.playlists.length?`<div class="grid">${S.playlists.map((p,i)=>`<button class="album" data-act="openPl" data-id="${p.id}"><div class="art" style="background:${grad(i+2)}">${motif(i+3)}<span class="lbl">${esc(p.name)}</span></div><div class="t">${esc(p.name)}</div><div class="s">${p.items.length} บท · ${fmtMin(totalMin(p.items))}</div></button>`).join('')}</div>`:`<div class="empty"><b>ยังไม่มี Praylist</b>กด “สร้างใหม่” แล้วเลือกบทสวดที่ต้องการ</div>`}`}
 function vPl(id){const p=S.playlists.find(x=>x.id===id);if(!p){sub=null;return vPlaylists()}const items=sortItems(p.items);
-  return `${back()}<div class="eyebrow">เพลย์ลิสต์</div><h1 class="big">${esc(p.name)}</h1><p class="muted" style="margin:0 0 12px">${items.length} บท · ประมาณ ${fmtMin(totalMin(items))} · เรียงตามลำดับขั้นการสวดอัตโนมัติ</p>
+  return `${back()}<div class="eyebrow">Praylist</div><h1 class="big">${esc(p.name)}</h1><p class="muted" style="margin:0 0 12px">${items.length} บท · ประมาณ ${fmtMin(totalMin(items))} · เรียงตามลำดับขั้นการสวดอัตโนมัติ</p>
   <div class="hstack"><button class="btn" data-act="playPl" data-id="${p.id}">${ic('play')} สวด</button><button class="btn ghost" data-act="editPl" data-id="${p.id}">แก้ไขบทสวด</button><button class="btn ghost" data-act="delPl" data-id="${p.id}">${ic('trash')} ลบ</button></div>
   ${items.length?stagedList(items):'<div class="empty" style="margin-top:16px"><b>ยังไม่มีบทสวด</b>กด “แก้ไขบทสวด” เพื่อเลือก</div>'}`}
 function vFav(){const items=sortItems(S.favs.filter(id=>C[id]).map(id=>({id})));
@@ -567,7 +576,7 @@ function vRadio(){const on=P&&P.radio;const it=on?P.items[P.ci]:null;
   <div class="radio"><div class="disc ${on&&P.playing?'spin':''}"></div>
    <div><div class="eyebrow">${on?'กำลังเล่น · สถานี'+esc(STATIONS.find(s=>s[0]===P.radio)[1]):'พร้อมออกอากาศ'}</div><h2 class="sec" style="margin-top:4px">${on?esc(titleOf(it)):'กดเล่นเพื่อเริ่มสถานี'}</h2></div>
    <div class="hstack" style="justify-content:center"><button class="btn" data-act="radioGo">${ic(on&&P.playing?'pause':'play')} ${on&&P.playing?'หยุด':'เล่นสถานี'}</button>${on?`<button class="btn ghost" data-act="next">${ic('shuffle')} สุ่มบทใหม่</button>`:''}</div>
-   <div class="seg" role="group" aria-label="เสียง">${[['lay','เสียงฆราวาส'],['monk','เสียงพระสวด'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
+   <div class="seg" role="group" aria-label="เสียง">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
   </div>`}
 
 /* meditation */
@@ -628,24 +637,24 @@ function notify(t,b){try{if('Notification'in window&&Notification.permission==='
 function sheet(html){$('#overlay').innerHTML=`<div class="scrim" data-act="scrim"><div class="sheet" role="dialog">${'<div class="grab"></div>'+html}</div></div>`}
 function closeSheet(){$('#overlay').innerHTML='';if(P&&P.open)P.open=false;renderMini()}
 function plEditor(p){const sel=new Set(p?p.items.map(i=>i.id):[]);
-  sheet(`<h3>${p?'แก้ไขเพลย์ลิสต์':'สร้างเพลย์ลิสต์'}</h3><p class="muted small" style="margin:0">เลือกบทสวดได้ตามใจ แอปจะเรียงตามลำดับขั้นการสวดที่ถูกต้องให้เอง</p>
-  <div class="field"><label for="plName">ชื่อเพลย์ลิสต์</label><input type="text" id="plName" value="${esc(p?p.name:'บทสวดของฉัน')}"></div>
+  sheet(`<h3>${p?'แก้ไข Praylist':'สร้าง Praylist'}</h3><p class="muted small" style="margin:0">เลือกบทสวดได้ตามใจ แอปจะเรียงตามลำดับขั้นการสวดที่ถูกต้องให้เอง</p>
+  <div class="field"><label for="plName">ชื่อ Praylist</label><input type="text" id="plName" value="${esc(p?p.name:'บทสวดของฉัน')}"></div>
   <div class="field"><label>บทสวด</label><div>${sortItems(CH.map(c=>({id:c.id}))).map(({id})=>`<label class="check" for="ck_${id}"><input type="checkbox" id="ck_${id}" value="${id}" ${sel.has(id)?'checked':''}><span class="main"><b>${esc(C[id].t)}</b><span>${esc(stageOf(C[id].o))} · ${fmtMin(C[id].m)}</span></span></label>`).join('')}</div></div>
   <div class="sticky-foot"><span class="muted small" id="plSum"></span><div class="hstack"><button class="btn ghost" data-act="closeSheet">ยกเลิก</button><button class="btn" data-act="savePl" data-id="${p?p.id:''}">บันทึก</button></div></div>`);
   const upd=()=>{const ids=[...document.querySelectorAll('.sheet input[type=checkbox]:checked')].map(i=>i.value);$('#plSum').textContent=`${ids.length} บท · ${fmtMin(totalMin(ids.map(id=>({id,reps:p&&p.items.find(x=>x.id===id)?.reps}))))}`};
   document.querySelectorAll('.sheet input[type=checkbox]').forEach(i=>i.onchange=upd);upd()}
 function previewSheet(title,items,note){sheet(`<h3>${esc(title)}</h3><p class="muted small" style="margin:0">${note||''}${items.length} บท · ประมาณ ${fmtMin(totalMin(items))}</p>${stagedList(items)}
-  <div class="sticky-foot"><button class="btn ghost" data-act="closeSheet">ปิด</button><div class="hstack"><button class="btn ghost" data-act="savePreview">บันทึกเป็นเพลย์ลิสต์</button><button class="btn" data-act="playPreview">${ic('play')} เริ่มสวด</button></div></div>`);previewSheet.cur={title,items}}
+  <div class="sticky-foot"><button class="btn ghost" data-act="closeSheet">ปิด</button><div class="hstack"><button class="btn ghost" data-act="savePreview">บันทึกเป็น Praylist</button><button class="btn" data-act="playPreview">${ic('play')} เริ่มสวด</button></div></div>`);previewSheet.cur={title,items}}
 function timeSheet(n){const tag=timeSheet.tag||null;const items=buildByTime(n,tag);timeSheet.n=n;
   sheet(`<h3>สวดมนต์ ${n} นาที</h3><p class="muted small" style="margin:0 0 10px">เลือกพลังพุทธคุณที่ต้องการเน้น (ไม่บังคับ)</p>
   <div class="chips"><button class="chip" data-act="timeTag" data-k="" aria-pressed="${!tag}">ทั่วไป</button>${TAGS.map(t=>`<button class="chip" data-act="timeTag" data-k="${t.k}" aria-pressed="${tag===t.k}">${t.k}</button>`).join('')}</div>
   <p class="muted small" style="margin:14px 0 0">${items.length} บท · ประมาณ ${fmtMin(totalMin(items))}</p>${stagedList(items)}
   <div class="sticky-foot"><button class="btn ghost" data-act="closeSheet">ปิด</button><div class="hstack"><button class="btn ghost" data-act="savePreview">บันทึก</button><button class="btn" data-act="playPreview">${ic('play')} เริ่มสวด</button></div></div>`);
   previewSheet.cur={title:`สวดมนต์ ${n} นาที${tag?' · '+tag:''}`,items}}
-function addToSheet(id){sheet(`<h3>เพิ่ม “${esc(C[id].t)}”</h3><p class="muted small" style="margin:0">เลือกเพลย์ลิสต์ บทสวดจะถูกจัดลำดับให้อัตโนมัติ</p><div class="list" style="margin-top:8px">${S.playlists.map(p=>`<button class="rowi" style="width:100%" data-act="addToPl" data-pl="${p.id}" data-id="${id}"><div class="main"><b>${esc(p.name)}</b><span>${p.items.length} บท${p.items.some(i=>i.id===id)?' · มีบทนี้แล้ว':''}</span></div>${ic('plus').replace('<svg','<svg style="width:20px"')}</button>`).join('')}</div>
- <div class="sticky-foot"><button class="btn ghost" data-act="closeSheet">ปิด</button><button class="btn" data-act="newPlWith" data-id="${id}">${ic('plus')} เพลย์ลิสต์ใหม่</button></div>`)}
+function addToSheet(id){sheet(`<h3>เพิ่ม “${esc(C[id].t)}”</h3><p class="muted small" style="margin:0">เลือก Praylist บทสวดจะถูกจัดลำดับให้อัตโนมัติ</p><div class="list" style="margin-top:8px">${S.playlists.map(p=>`<button class="rowi" style="width:100%" data-act="addToPl" data-pl="${p.id}" data-id="${id}"><div class="main"><b>${esc(p.name)}</b><span>${p.items.length} บท${p.items.some(i=>i.id===id)?' · มีบทนี้แล้ว':''}</span></div>${ic('plus').replace('<svg','<svg style="width:20px"')}</button>`).join('')}</div>
+ <div class="sticky-foot"><button class="btn ghost" data-act="closeSheet">ปิด</button><button class="btn" data-act="newPlWith" data-id="${id}">${ic('plus')} Praylist ใหม่</button></div>`)}
 function settingsSheet(){const s=S.settings;sheet(`<h3>ตั้งค่า</h3>
- <div class="field"><label>เสียงสวดเริ่มต้น</label><div class="seg">${[['lay','เสียงฆราวาส'],['monk','เสียงพระสวด'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${s.voice===k}">${l}</button>`).join('')}</div></div>
+ <div class="field"><label>เสียงสวดเริ่มต้น</label><div class="seg">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${s.voice===k}">${l}</button>`).join('')}</div></div>
  <div class="field"><label for="setSpd">ความเร็วเสียงสวด <b id="setSpdV">${s.speed.toFixed(1)}×</b></label><input type="range" id="setSpd" min="0.5" max="1.6" step="0.1" value="${s.speed}"></div>
  <div class="field"><label for="setFs">ขนาดตัวอักษรบทสวด <b id="setFsV">${s.fs}px</b></label><input type="range" id="setFs" min="16" max="40" step="1" value="${s.fs}"><div id="fsPrev" style="font-family:var(--f-chant);font-size:${s.fs}px;line-height:1.6">อิติปิ โส ภะคะวา อะระหัง</div></div>
  <div class="field"><label>การแจ้งเตือน</label>${toggleRow('praNotif','แจ้งเตือนวันพระ','แสดงล่วงหน้า ๑ วัน และในวันพระ')}${toggleRow('streakNotif','เตือนรักษาสตรีค','เตือนหลัง ๑๘.๐๐ น.')}</div>
@@ -665,14 +674,14 @@ document.addEventListener('click',e=>{const tb=e.target.closest('.tab');if(tb&&t
   case'dismiss':S.dismiss[el.dataset.k]=1;save();renderView();break;
   case'mood':mood=mood===el.dataset.k?null:el.dataset.k;renderView();break;
   case'playMood':{const m=MOODS.find(x=>x.k===mood);startQueue('สำหรับใจที่'+m.l,moodItems(m));break}
-  case'saveMood':{const m=MOODS.find(x=>x.k===mood);S.playlists.push({id:'p'+Date.now(),name:'ใจ'+m.l,items:moodItems(m)});save();toast('บันทึกเป็นเพลย์ลิสต์แล้ว');break}
+  case'saveMood':{const m=MOODS.find(x=>x.k===mood);S.playlists.push({id:'p'+Date.now(),name:'ใจ'+m.l,items:moodItems(m)});save();toast('บันทึกเป็น Praylist แล้ว');break}
   case'time':timeSheet.tag=null;timeSheet(+el.dataset.n);break;
   case'timeTag':timeSheet.tag=el.dataset.k||null;timeSheet(timeSheet.n);break;
   case'playPreview':{const c=previewSheet.cur;closeSheet();startQueue(c.title,c.items);break}
-  case'savePreview':{const c=previewSheet.cur;S.playlists.push({id:'p'+Date.now(),name:c.title,items:c.items});save();closeSheet();toast('บันทึกในเพลย์ลิสต์แล้ว');if(curView==='playlists')renderView();break}
+  case'savePreview':{const c=previewSheet.cur;S.playlists.push({id:'p'+Date.now(),name:c.title,items:c.items});save();closeSheet();toast('บันทึกใน Praylist แล้ว');if(curView==='playlists')renderView();break}
   case'openSet':goSub('browse',{type:'set',id});break;
   case'playSet':{const s=SETS.find(x=>x.id===id);startQueue(s.t,sortItems(s.items.map(i=>({id:i}))));break}
-  case'copySet':{const s=SETS.find(x=>x.id===id);S.playlists.push({id:'p'+Date.now(),name:s.t+' (ของฉัน)',items:s.items.map(i=>({id:i}))});save();toast('คัดลอกไปที่เพลย์ลิสต์แล้ว');break}
+  case'copySet':{const s=SETS.find(x=>x.id===id);S.playlists.push({id:'p'+Date.now(),name:s.t+' (ของฉัน)',items:s.items.map(i=>({id:i}))});save();toast('คัดลอกไปที่ Praylist แล้ว');break}
   case'teacher':goSub('browse',{type:'teacher',id});break;
   case'topic':goSub('browse',{type:'topic',id,mode:'story'});break;
   case'topicMode':sub.mode=el.dataset.v;renderView();break;
@@ -692,7 +701,7 @@ document.addEventListener('click',e=>{const tb=e.target.closest('.tab');if(tb&&t
    save();closeSheet();goSub('playlists',{type:'pl',id:p.id});toast('บันทึกและเรียงลำดับขั้นการสวดแล้ว');break}
   case'openPl':sub={type:'pl',id};renderView();window.scrollTo(0,0);break;
   case'playPl':{const p=S.playlists.find(x=>x.id===id);if(p.items.length)startQueue(p.name,sortItems(p.items));break}
-  case'delPl':if(el.dataset.confirm){S.playlists=S.playlists.filter(x=>x.id!==id);save();sub=null;renderView();toast('ลบเพลย์ลิสต์แล้ว')}else{el.dataset.confirm=1;el.innerHTML=ic('trash')+' กดอีกครั้งเพื่อยืนยัน'}break;
+  case'delPl':if(el.dataset.confirm){S.playlists=S.playlists.filter(x=>x.id!==id);save();sub=null;renderView();toast('ลบ Praylist แล้ว')}else{el.dataset.confirm=1;el.innerHTML=ic('trash')+' กดอีกครั้งเพื่อยืนยัน'}break;
   case'playFav':startQueue('รายการโปรด',sortItems(S.favs.filter(i=>C[i]).map(i=>({id:i}))));break;
   case'station':station=el.dataset.k;if(P&&P.radio){startQueue('วิทยุบทสวด',[radioPick(station)],{radio:station,open:false})}else renderView();break;
   case'radioGo':if(P&&P.radio){P.playing?pause():play()}else{P=null;startQueue('วิทยุบทสวด',[radioPick(station)],{radio:station,open:false})}renderView();break;
