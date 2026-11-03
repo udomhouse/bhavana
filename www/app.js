@@ -179,6 +179,7 @@ const IC={
  list:'<path d="M4 6h11M4 12h11M4 18h7"/><circle cx="18" cy="17" r="2.5"/><path d="M20.5 17V6l-3 1"/>',
  heart:'<path d="M12 20s-7-4.4-9.2-9C1.3 7.8 3.4 4.5 6.8 4.5c2 0 3.4 1.1 5.2 3 1.8-1.9 3.2-3 5.2-3 3.4 0 5.5 3.3 4 6.5C19 15.6 12 20 12 20z"/>',
  heartf:'<path fill="currentColor" d="M12 20s-7-4.4-9.2-9C1.3 7.8 3.4 4.5 6.8 4.5c2 0 3.4 1.1 5.2 3 1.8-1.9 3.2-3 5.2-3 3.4 0 5.5 3.3 4 6.5C19 15.6 12 20 12 20z"/>',
+ chat:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M8.5 8.5h7M8.5 12h4.5"/>',
  radio:'<circle cx="12" cy="12" r="2"/><path d="M8.5 15.5a5 5 0 0 1 0-7M15.5 8.5a5 5 0 0 1 0 7M5.6 18.4a9 9 0 0 1 0-12.8M18.4 5.6a9 9 0 0 1 0 12.8"/>',
  med:'<circle cx="12" cy="5" r="2.2"/><path d="M12 8v5M6 20c1.5-3 3.5-4.5 6-4.5s4.5 1.5 6 4.5M4 14c2.5 1 5 .5 8-1 3 1.5 5.5 2 8 1"/>',
  play:'<path fill="currentColor" stroke="none" d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/>',
@@ -455,15 +456,16 @@ function renderMini(){const m=$('#mini');if(!P||P.open){m.hidden=true;return}m.h
   m.className='mini';m.innerHTML=`<div class="thumb"></div><button class="main" data-act="openPlayer"><b>${esc(titleOf(it))}</b><span>${esc(P.title)}</span></button><button class="pb" data-act="toggle" aria-label="เล่น/หยุด">${ic(P.playing?'pause':'play')}</button><button class="pb" data-act="next" aria-label="ถัดไป">${ic('next')}</button>`}
 
 /* ============ views ============ */
-const TABS=[['home','หน้าหลัก','home'],['browse','เลือกดู','browse'],['playlists','Praylist','list'],['favourite','รายการโปรด','heart'],['radio','วิทยุ','radio'],['meditation','ห้องสมาธิ','med']];
+const TABS=[['home','หน้าหลัก','home'],['talk','สนทนาธรรม','chat'],['browse','เลือกดู','browse'],['playlists','Praylist','list'],['favourite','รายการโปรด','heart'],['meditation','ห้องสมาธิ','med']];
+const VIEWS=[...TABS.map(t=>t[0]),'radio']; // radio opens from Home and Browse
 let pendingSub=null;
 function goSub(view,sb){if(curView===view){sub=sb;renderView();window.scrollTo(0,0)}else{pendingSub=sb;location.hash=view}}
 let curView='home',sub=null,mood=null,query='',tagF=null,calM=null;
 function renderNav(){$('#nav').innerHTML=`<div class="brand">Bhāvanā<small>สวดมนต์ · สมาธิ · ธรรมะ</small></div>`+TABS.map(([k,l,i])=>`<a class="tab" href="#${k}" ${curView===k?'aria-current="page"':''}>${ic(i)}<span>${l}</span></a>`).join('')}
-function route(){const h=(location.hash||'#home').slice(1);curView=TABS.some(t=>t[0]===h)?h:'home';sub=pendingSub;pendingSub=null;render();window.scrollTo(0,0)}
+function route(){const h=(location.hash||'#home').slice(1);curView=VIEWS.includes(h)?h:'home';sub=pendingSub;pendingSub=null;render();window.scrollTo(0,0)}
 function render(){renderNav();renderView();renderMini()}
 function renderView(){const v=$('#view .wrap');
-  const fn={home:vHome,browse:vBrowse,playlists:vPlaylists,favourite:vFav,radio:vRadio,meditation:vMed}[curView];
+  const fn={home:vHome,talk:vTalk,browse:vBrowse,playlists:vPlaylists,favourite:vFav,radio:vRadio,meditation:vMed}[curView];
   v.innerHTML=fn();after()}
 function after(){
   const c=$('#askArt');if(c)drawEnso(c);
@@ -527,6 +529,7 @@ function vBrowse(){
   if(sub&&sub.type==='topic')return vTopic(sub.id);
   return `<h1 class="big">เลือกดู</h1>
   <div class="search">${ic('search')}<input id="q" type="search" placeholder="ค้นหาชื่อบทสวด หรือพลังพุทธคุณ" value="${esc(query)}" aria-label="ค้นหา"></div>
+  <a class="tile" href="#radio" style="text-decoration:none;margin-top:14px"><div class="ic" style="background:linear-gradient(135deg,var(--sky),var(--lilac))">${ic('radio')}</div><div><b>วิทยุบทสวด</b><span>สุ่มบทสวดเล่นต่อเนื่อง</span></div></a>
   <div class="sechead" style="margin-top:18px"><h2 class="sec">พลังพุทธคุณ</h2></div>
   <div class="chips">${TAGS.map(t=>`<button class="chip" data-act="tag" data-k="${t.k}" aria-pressed="${tagF===t.k}" title="${esc(t.d)}">${t.k}</button>`).join('')}</div>
   <div id="results" ${query||tagF?'':'hidden'}>${query||tagF?resultsBlock():''}</div><div id="browseDefault" ${query||tagF?'hidden':''}>
@@ -668,6 +671,127 @@ function settingsSheet(){const s=S.settings;sheet(`<h3>ตั้งค่า</h3
  $('#setSpd').oninput=e=>{s.speed=+e.target.value;$('#setSpdV').textContent=s.speed.toFixed(1)+'×';save()};
  $('#setFs').oninput=e=>{s.fs=+e.target.value;$('#setFsV').textContent=s.fs+'px';$('#fsPrev').style.fontSize=s.fs+'px';save()}}
 
+/* ============ สนทนาธรรม (community Q&A) ============
+   One UI, two backends:
+   - phone app: Supabase (www/config.js holds the project URL + anon key; schema in supabase/schema.sql)
+   - web preview: the artifact's own shared database
+   Premium members ask, answer and give "สาธุ"; everyone can read. */
+const TALK_TOPICS=['ครอบครัว','การงาน','ความรัก','สุขภาพใจ','การภาวนา','ทั่วไป'];
+const TALK_BAD=['ควย','เหี้ย','สัส','ไอ้สัตว์','อีดอก','fuck','shit','bitch'];
+const Talk={api:undefined,loading:false,error:null,qs:null,threads:{},mine:new Set(),filter:'all'};
+const ago=ms=>{const s=(Date.now()-ms)/1000;if(s<60)return'เมื่อสักครู่';if(s<3600)return Math.floor(s/60)+' นาทีที่แล้ว';if(s<86400)return Math.floor(s/3600)+' ชม.ที่แล้ว';if(s<86400*30)return Math.floor(s/86400)+' วันที่แล้ว';const d=new Date(ms);return d.getDate()+' '+TH_MS[d.getMonth()]+' '+(d.getFullYear()+543)};
+function talkCheck(text){const t=text.toLowerCase();if(/https?:\/\/|www\./.test(t))return'งดใส่ลิงก์ในห้องสนทนาธรรม';if(TALK_BAD.some(w=>t.includes(w)))return'มีถ้อยคำที่ไม่สุภาพ ลองเรียบเรียงใหม่ด้วยเมตตา';return''}
+
+function supaAdapter(cfg){
+  const base=cfg.supabaseUrl.replace(/\/$/,''),key=cfg.supabaseAnonKey;
+  const auth=()=>S.talkAuth||null;
+  async function signIn(){const r=await fetch(base+'/auth/v1/signup',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:'{}'});
+    if(!r.ok)throw new Error('signin '+r.status);const j=await r.json();S.talkAuth={at:j.access_token,rt:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000,uid:j.user.id};save();return S.talkAuth}
+  async function refresh(){const a=auth();if(!a)return signIn();const r=await fetch(base+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:a.rt})});
+    if(!r.ok)return signIn();const j=await r.json();S.talkAuth={at:j.access_token,rt:j.refresh_token,exp:Date.now()+(j.expires_in||3600)*1000,uid:j.user.id};save();return S.talkAuth}
+  async function token(){let a=auth();if(!a)a=await signIn();else if(Date.now()>a.exp-60000)a=await refresh();return a}
+  async function q(path,opt={},retry=true){const a=await token();
+    const r=await fetch(base+'/rest/v1/'+path,{...opt,headers:{apikey:key,Authorization:'Bearer '+a.at,'Content-Type':'application/json',Prefer:'return=representation',...(opt.headers||{})}});
+    if(r.status===401&&retry){await refresh();return q(path,opt,false)}
+    if(!r.ok){const t=await r.text();throw new Error(r.status+' '+t.slice(0,120))}
+    return r.status===204?null:r.json()}
+  const mapQ=x=>({id:String(x.id),title:x.title,body:x.body,topic:x.topic,alias:x.alias,uid:x.author,at:Date.parse(x.created_at),answers:x.answer_count,sadhu:x.sadhu_count});
+  const mapA=x=>({id:String(x.id),q:String(x.question_id),body:x.body,alias:x.alias,uid:x.author,at:Date.parse(x.created_at),sadhu:x.sadhu_count});
+  return {kind:'supabase',
+    async uid(){return (await token()).uid},
+    async feed(){const [qs,rs]=await Promise.all([q('questions?select=*&hidden=eq.false&order=created_at.desc&limit=100'),q('reactions?select=target_type,target_id')]);
+      return {qs:qs.map(mapQ),mine:new Set(rs.map(r=>r.target_type+':'+r.target_id))}},
+    async thread(qid){return (await q('answers?select=*&hidden=eq.false&question_id=eq.'+qid+'&order=created_at.asc&limit=300')).map(mapA)},
+    async ask(d){return mapQ((await q('questions',{method:'POST',body:JSON.stringify({title:d.title,body:d.body,topic:d.topic,alias:d.alias})}))[0])},
+    async answer(qid,d){return mapA((await q('answers',{method:'POST',body:JSON.stringify({question_id:+qid,body:d.body,alias:d.alias})}))[0])},
+    async sadhu(kind,id,on){if(on)await q('reactions',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({target_type:kind,target_id:+id})});
+      else await q('reactions?target_type=eq.'+kind+'&target_id=eq.'+id,{method:'DELETE',headers:{Prefer:'return=minimal'}})},
+    async report(kind,id,reason){await q('reports',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({target_type:kind,target_id:+id,reason})})},
+    async remove(kind,id){await q((kind==='q'?'questions':'answers')+'?id=eq.'+id,{method:'DELETE',headers:{Prefer:'return=minimal'}})}
+  };
+}
+async function dbAdapter(){
+  const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);if(!db||!user)return null;
+  const me=await user.id();if(!me)return null;
+  const all=async c=>(await db.collection(c).limit(1000).get()).docs.map(d=>({id:d.id,...d.data()}));
+  return {kind:'db',
+    async uid(){return me},
+    async feed(){const [qs,as,ss,rs]=await Promise.all([all('talk_q'),all('talk_a'),all('talk_s'),all('talk_r')]);
+      const hide=new Set(Object.entries(rs.reduce((m,r)=>(m[r.kind+':'+r.tid]=(m[r.kind+':'+r.tid]||0)+1,m),{})).filter(([,n])=>n>=3).map(([k])=>k));
+      const cnt={},sad={};as.forEach(a=>{if(!hide.has('a:'+a.id))cnt[a.q]=(cnt[a.q]||0)+1});ss.forEach(s=>sad[s.kind+':'+s.tid]=(sad[s.kind+':'+s.tid]||0)+1);
+      this._sad=sad;this._hide=hide;this._as=as;
+      return {qs:qs.filter(x=>!hide.has('q:'+x.id)).map(x=>({...x,answers:cnt[x.id]||0,sadhu:sad['q:'+x.id]||0})).sort((a,b)=>b.at-a.at),
+        mine:new Set(ss.filter(s=>s.uid===me).map(s=>s.kind+':'+s.tid))}},
+    async thread(qid){if(!this._as)await this.feed();const as=(await db.collection('talk_a').where('q','==',qid).limit(300).get()).docs.map(d=>({id:d.id,...d.data()}));
+      return as.filter(a=>!this._hide.has('a:'+a.id)).map(a=>({...a,sadhu:this._sad['a:'+a.id]||0})).sort((a,b)=>a.at-b.at)},
+    async ask(d){const doc={title:d.title,body:d.body,topic:d.topic,alias:d.alias,uid:me,at:Date.now()};const r=await db.collection('talk_q').add(doc);return {id:r.id,...doc,answers:0,sadhu:0}},
+    async answer(qid,d){const doc={q:qid,body:d.body,alias:d.alias,uid:me,at:Date.now()};const r=await db.collection('talk_a').add(doc);return {id:r.id,...doc,sadhu:0}},
+    async sadhu(kind,id,on){const ref=db.doc('talk_s/'+kind+'_'+id+'_'+me);if(on)await ref.set({kind,tid:id,uid:me,at:Date.now()});else await ref.delete()},
+    async report(kind,id,reason){await db.doc('talk_r/'+kind+'_'+id+'_'+me).set({kind,tid:id,reason,uid:me,at:Date.now()})},
+    async remove(kind,id){await db.doc((kind==='q'?'talk_q/':'talk_a/')+id).delete()}
+  };
+}
+async function talkApi(){
+  if(Talk.api!==undefined)return Talk.api;
+  const cfg=window.BHAVANA_CONFIG||{};
+  try{
+    if(window.__TALK_MOCK)Talk.api=window.__TALK_MOCK;
+    else if(cfg.supabaseUrl&&cfg.supabaseAnonKey)Talk.api=supaAdapter(cfg);
+    else if(window.claude&&claude.use)Talk.api=await dbAdapter();
+    else Talk.api=null;
+  }catch(e){Talk.api=null}
+  if(Talk.api){try{Talk.me=await Talk.api.uid()}catch(e){}}
+  return Talk.api;
+}
+async function talkLoad(){Talk.loading=true;Talk.error=null;if(curView==='talk')renderView();
+  try{const api=await talkApi();if(!api){Talk.loading=false;Talk.qs=null;if(curView==='talk')renderView();return}
+    const f=await api.feed();Talk.qs=f.qs;Talk.mine=f.mine;
+    if(sub&&sub.type==='q')Talk.threads[sub.id]=await api.thread(sub.id);
+  }catch(e){Talk.error=String(e.message||e)}
+  Talk.loading=false;if(curView==='talk')renderView()}
+async function talkLoadThread(id){try{const api=await talkApi();Talk.threads[id]=await api.thread(id)}catch(e){Talk.error=String(e.message||e)}if(curView==='talk')renderView()}
+const blocked=uid=>(S.blocked||[]).includes(uid);
+function talkIdentity(next){if(S.talkAlias&&S.talkAgreed)return next();
+  sheet(`<h3>ก่อนเข้าร่วมสนทนา</h3><p class="muted small" style="margin:0">ตั้งชื่อที่จะแสดงในห้อง ไม่จำเป็นต้องเป็นชื่อจริง</p>
+  <div class="field"><label for="talkAlias">ชื่อที่แสดง</label><input type="text" id="talkAlias" maxlength="30" value="${esc(S.talkAlias||'ผู้ใฝ่ธรรม '+(100+Math.floor(Math.random()*900)))}"></div>
+  <div class="card" style="margin-top:14px;font-size:13.5px;line-height:1.7"><b>กติกาห้องสนทนาธรรม</b><br>• พูดคุยด้วยความสุภาพและเมตตา เคารพความเห็นที่ต่างกัน<br>• ไม่โฆษณา ไม่ใส่ลิงก์ ไม่เปิดเผยข้อมูลส่วนตัวของผู้อื่น<br>• คำตอบในห้องเป็นการแบ่งปันมุมมอง ไม่ใช่คำแนะนำทางการแพทย์หรือกฎหมาย<br>• โพสต์ที่ถูกรายงานหลายครั้งจะถูกซ่อนโดยอัตโนมัติ</div>
+  <label class="check" for="talkAgree"><input type="checkbox" id="talkAgree" ${S.talkAgreed?'checked':''}><span class="main"><b>ยอมรับกติกา</b></span></label>
+  <div class="sticky-foot"><button class="btn ghost" data-act="closeSheet">ยกเลิก</button><button class="btn" data-act="talkSaveId">ตกลง</button></div>`);
+  talkIdentity.next=next}
+function talkAskSheet(){sheet(`<h3>ตั้งคำถาม</h3><p class="muted small" style="margin:0">เล่าเรื่องในชีวิตประจำวันที่อยากได้มุมมองธรรมะ สมาชิกคนอื่นจะช่วยกันตอบ</p>
+  <div class="field"><label for="tq">หัวข้อคำถาม</label><input type="text" id="tq" maxlength="140" placeholder="เช่น ทำอย่างไรให้ไม่โกรธเพื่อนร่วมงาน"></div>
+  <div class="field"><label for="tb">รายละเอียด (ไม่บังคับ)</label><textarea id="tb" rows="5" maxlength="2000" placeholder="เล่าสถานการณ์ให้คนอื่นเข้าใจ"></textarea></div>
+  <div class="field"><label>หมวด</label><div class="chips" id="tTopic">${TALK_TOPICS.map((t,i)=>`<button class="chip" data-act="talkPickTopic" data-k="${t}" aria-pressed="${i===TALK_TOPICS.length-1}">${t}</button>`).join('')}</div></div>
+  <p class="muted small">โพสต์ในชื่อ <b>${esc(S.talkAlias)}</b></p>
+  <div class="sticky-foot"><button class="btn ghost" data-act="closeSheet">ยกเลิก</button><button class="btn" data-act="talkSubmitQ">โพสต์คำถาม</button></div>`)}
+function talkMoreSheet(kind,id,uid){const mine=uid===Talk.me;
+  sheet(`<h3>${mine?'โพสต์ของคุณ':'ตัวเลือก'}</h3><div class="list" style="margin-top:6px">
+  ${mine?`<button class="rowi" style="width:100%" data-act="talkDelete" data-kind="${kind}" data-id="${esc(id)}"><div class="main"><b>ลบโพสต์นี้</b><span>ลบออกจากห้องสนทนาถาวร</span></div></button>`:
+  `${['ไม่สุภาพหรือทำร้ายจิตใจ','สแปมหรือโฆษณา','ข้อมูลเท็จหรือเป็นอันตราย'].map(r=>`<button class="rowi" style="width:100%" data-act="talkReport" data-kind="${kind}" data-id="${esc(id)}" data-reason="${r}"><div class="main"><b>รายงาน: ${r}</b><span>โพสต์ที่ถูกรายงาน ๓ ครั้งจะถูกซ่อน</span></div></button>`).join('')}
+   <button class="rowi" style="width:100%" data-act="talkBlock" data-uid="${esc(uid)}"><div class="main"><b>ไม่แสดงโพสต์จากผู้ใช้นี้</b><span>ซ่อนบนเครื่องของคุณ</span></div></button>`}</div>
+  <div class="sticky-foot"><span></span><button class="btn ghost" data-act="closeSheet">ปิด</button></div>`)}
+const talkMeta=(x,kind)=>`<div class="tmeta"><span class="tav" style="background:${grad((x.alias||'?').charCodeAt(0)%6)}">${esc(((x.alias||'').replace(/^ผู้/,'').match(/[ก-ฮA-Za-z0-9]/)||['☸'])[0])}</span><span>${esc(x.alias)}${x.uid===Talk.me?' (คุณ)':''} · ${ago(x.at)}</span>
+  <button class="sadhu ${Talk.mine.has(kind+':'+x.id)?'on':''}" data-act="talkSadhu" data-kind="${kind}" data-id="${esc(x.id)}" aria-label="สาธุ">🙏 ${x.sadhu||0}</button><button class="tmore" data-act="talkMore" data-kind="${kind}" data-id="${esc(x.id)}" data-uid="${esc(x.uid)}" aria-label="ตัวเลือก">⋯</button></div>`;
+function vTalk(){
+  if(Talk.api===undefined&&!Talk.loading)setTimeout(talkLoad,0);
+  if(sub&&sub.type==='q')return vTalkThread(sub.id);
+  const head=`<div class="topbar"><div style="min-width:0"><h1 class="big">สนทนาธรรม</h1><p class="muted" style="margin:0">ถามเรื่องในชีวิตประจำวัน แลกเปลี่ยนมุมมองธรรมะด้วยเมตตา</p></div><button class="btn" data-act="talkAsk">${ic('plus')} ตั้งคำถาม</button></div>
+   <div class="banner" style="background:color-mix(in srgb,var(--sky) 14%,var(--bg))">💬<div style="font-size:13px">คำตอบในห้องเป็นการแบ่งปันจากสมาชิก หากมีความคิดทำร้ายตัวเอง โทร <b>สายด่วนสุขภาพจิต 1323</b> ได้ตลอด ๒๔ ชั่วโมง</div></div>`;
+  if(Talk.api===null&&!Talk.loading)return head+`<div class="empty" style="margin-top:16px"><b>ห้องสนทนายังไม่พร้อมใช้งาน</b>${window.NATIVE||window.BHAVANA_CONFIG?'ยังไม่ได้ตั้งค่าเซิร์ฟเวอร์ Supabase ในไฟล์ www/config.js':'เปิดหน้านี้ใน claude.ai เพื่อใช้ห้องสนทนาตัวอย่าง'}</div>`;
+  if(Talk.error)return head+`<div class="empty" style="margin-top:16px"><b>โหลดห้องสนทนาไม่สำเร็จ</b>ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่<div style="margin-top:12px"><button class="btn sm" data-act="talkRefresh">ลองใหม่</button></div></div>`;
+  if(!Talk.qs)return head+`<div class="empty" style="margin-top:16px"><b>กำลังโหลด…</b>รอสักครู่</div>`;
+  const f=Talk.filter;let qs=Talk.qs.filter(x=>!blocked(x.uid));
+  if(f==='open')qs=qs.filter(x=>!x.answers);else if(f!=='all')qs=qs.filter(x=>x.topic===f);
+  return head+`<div class="chips" style="margin-top:16px">${[['all','ทั้งหมด'],['open','รอคำตอบ'],...TALK_TOPICS.map(t=>[t,t])].map(([k,l])=>`<button class="chip" data-act="talkFilter" data-k="${k}" aria-pressed="${f===k}">${l}</button>`).join('')}<button class="chip" data-act="talkRefresh" aria-label="รีเฟรช">↻</button></div>
+   <div class="tlist">${qs.length?qs.map(x=>`<article class="tq"><button class="tq-main" data-act="talkOpen" data-id="${esc(x.id)}"><span class="tg">${esc(x.topic)}</span><b>${esc(x.title)}</b>${x.body?`<span class="tq-body">${esc(x.body)}</span>`:''}</button>
+     ${talkMeta(x,'q')}<div class="tq-foot">💬 ${x.answers?x.answers+' คำตอบ':'ยังไม่มีคำตอบ'}</div></article>`).join(''):`<div class="empty"><b>${Talk.qs.length?'ไม่มีคำถามในหมวดนี้':'ยังไม่มีคำถาม'}</b>${isPremium()?'เริ่มเป็นคนแรก กด “ตั้งคำถาม” ด้านบน':'สมาชิก Premium ตั้งคำถามและตอบได้'}</div>`}</div>`}
+function vTalkThread(id){const x=(Talk.qs||[]).find(q=>q.id===id);if(!x){sub=null;return vTalk()}
+  const as=(Talk.threads[id]||null);if(!as)setTimeout(()=>talkLoadThread(id),0);
+  return `${back()}<article class="tq big"><span class="tg">${esc(x.topic)}</span><h2 class="sec" style="margin:8px 0 6px;font-size:22px">${esc(x.title)}</h2>${x.body?`<div class="tq-body full">${esc(x.body)}</div>`:''}${talkMeta(x,'q')}</article>
+  <div class="sechead" style="margin-top:22px"><h2 class="sec">${as?as.filter(a=>!blocked(a.uid)).length+' คำตอบ':'คำตอบ'}</h2></div>
+  <div class="thread">${as?as.filter(a=>!blocked(a.uid)).map(a=>`<div class="bub ${a.uid===Talk.me?'me':''}"><div class="bub-body">${esc(a.body)}</div>${talkMeta(a,'a')}</div>`).join('')||'<div class="empty"><b>ยังไม่มีคำตอบ</b>ร่วมแบ่งปันมุมมองธรรมะเป็นคนแรก</div>':'<div class="empty">กำลังโหลด…</div>'}</div>
+  <div class="composer">${isPremium()?`<textarea id="talkReplyBox" rows="2" maxlength="2000" placeholder="แบ่งปันมุมมองด้วยเมตตา…" aria-label="เขียนคำตอบ"></textarea><button class="btn" data-act="talkReply" data-id="${esc(id)}">ส่ง</button>`:`<button class="btn" style="flex:1" data-act="paywall" data-k="talk">🪷 ร่วมตอบด้วย Premium</button>`}</div>`}
+
 /* ============ premium ============ */
 const FREE_PER_DAY=3,PRICE_FALLBACK='1.99 AUD · ประมาณ ฿49';
 // In the phone app, Premium comes from the App Store / Google Play. The web preview is unlocked unless "จำลองผู้ใช้ฟรี" is on.
@@ -675,12 +799,12 @@ const isPremium=()=>window.NATIVE?!!S.premium:!S.settings.simFree;
 function freeToday(){const d=ymd(new Date());S.freeLog=S.freeLog||{};if(!S.freeLog[d])S.freeLog={[d]:[]};return S.freeLog[d]}
 const freeLeft=()=>Math.max(0,FREE_PER_DAY-freeToday().length);
 function allowChant(id){if(isPremium())return true;const t=freeToday();if(t.includes(id))return true;if(t.length<FREE_PER_DAY){t.push(id);save();return true}return false}
-const PAY_REASON={limit:['วันนี้สวดฟรีครบ ๓ บทแล้ว','สวดต่อได้ไม่จำกัดด้วย Premium หรือกลับมาสวดฟรีใหม่พรุ่งนี้'],fav:['รายการโปรดเป็นฟีเจอร์ Premium','เก็บบทสวดและธรรมะที่ชอบไว้ฟังได้ทันที'],praylist:['สร้าง Praylist ของตัวเองด้วย Premium','เลือกบทสวดเอง แอปเรียงลำดับขั้นการสวดให้อัตโนมัติ']};
+const PAY_REASON={limit:['วันนี้สวดฟรีครบ ๓ บทแล้ว','สวดต่อได้ไม่จำกัดด้วย Premium หรือกลับมาสวดฟรีใหม่พรุ่งนี้'],fav:['รายการโปรดเป็นฟีเจอร์ Premium','เก็บบทสวดและธรรมะที่ชอบไว้ฟังได้ทันที'],praylist:['สร้าง Praylist ของตัวเองด้วย Premium','เลือกบทสวดเอง แอปเรียงลำดับขั้นการสวดให้อัตโนมัติ'],talk:['ร่วมสนทนาธรรมด้วย Premium','ตั้งคำถามเรื่องชีวิตประจำวัน ตอบ และกดสาธุให้สมาชิกคนอื่น']};
 let premiumPrice=null;
 function paywall(reason){const r=PAY_REASON[reason]||['Bhāvanā Premium','ปลดล็อกทุกฟีเจอร์'];
   sheet(`<div style="text-align:center"><div class="bd" style="width:64px;height:64px;border-radius:50%;margin:4px auto 10px;display:grid;place-items:center;font-size:30px;background:linear-gradient(135deg,var(--sky),var(--lilac) 55%,var(--pink))">🪷</div>
    <div class="eyebrow">Bhāvanā Premium</div><h3>${r[0]}</h3><p class="muted" style="margin:0 0 14px">${r[1]}</p></div>
-   <div class="card" style="display:flex;flex-direction:column;gap:10px">${[['📿','สวดได้ไม่จำกัด','เวอร์ชันฟรีสวดได้วันละ '+FREE_PER_DAY+' บท'],['💛','รายการโปรด','เก็บบทสวดและหัวข้อธรรมที่ชอบ'],['🎧','Praylist ของตัวเอง','จัดชุดบทสวดเอง เรียงขั้นตอนถูกต้องให้อัตโนมัติ'],['♾️','จ่ายครั้งเดียว ใช้ได้ตลอดไป','ไม่มีค่าสมาชิกรายเดือน']].map(([e,t,d])=>`<div style="display:flex;gap:12px;align-items:center"><span style="font-size:22px">${e}</span><div><b>${t}</b><div class="muted small">${d}</div></div></div>`).join('')}</div>
+   <div class="card" style="display:flex;flex-direction:column;gap:10px">${[['📿','สวดได้ไม่จำกัด','เวอร์ชันฟรีสวดได้วันละ '+FREE_PER_DAY+' บท'],['💛','รายการโปรด','เก็บบทสวดและหัวข้อธรรมที่ชอบ'],['🎧','Praylist ของตัวเอง','จัดชุดบทสวดเอง เรียงขั้นตอนถูกต้องให้อัตโนมัติ'],['💬','ห้องสนทนาธรรม','ตั้งคำถามและตอบคำถามของสมาชิก'],['♾️','จ่ายครั้งเดียว ใช้ได้ตลอดไป','ไม่มีค่าสมาชิกรายเดือน']].map(([e,t,d])=>`<div style="display:flex;gap:12px;align-items:center"><span style="font-size:22px">${e}</span><div><b>${t}</b><div class="muted small">${d}</div></div></div>`).join('')}</div>
    <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px"><button class="btn" data-act="buyPremium">ปลดล็อก Premium · ${esc(premiumPrice||PRICE_FALLBACK)}</button>
    <button class="btn ghost" data-act="restorePremium">กู้คืนการซื้อ</button><button class="btn ghost" data-act="closeSheet">ไว้ทีหลัง</button></div>
    <p class="muted small" style="text-align:center;margin:12px 0 0">${window.NATIVE?'ชำระผ่านบัญชี '+(NATIVE.platform==='ios'?'Apple ID':'Google Play')+' ของคุณ เปลี่ยนเครื่องใหม่ให้กด "กู้คืนการซื้อ"':'หน้านี้เป็นตัวอย่างบนเว็บ การซื้อจริงทำได้ในแอป Bhāvanā บน iPhone และ Android'}</p>`)}
@@ -748,6 +872,25 @@ document.addEventListener('click',e=>{const tb=e.target.closest('.tab');if(tb&&t
   case'restorePremium':if(!window.NATIVE){toast('กู้คืนการซื้อได้ในแอปบนมือถือ');break}
    NATIVE.restorePremium().then(ok=>{setPremium(!!ok);if(ok){closeSheet();toast('กู้คืน Premium แล้ว 🪷')}else toast('ไม่พบการซื้อ Premium ในบัญชีนี้')}).catch(()=>toast('กู้คืนไม่สำเร็จ ลองใหม่อีกครั้ง'));break;
   case'paywall':paywall(el.dataset.k);break;
+  case'talkAsk':if(!isPremium()){paywall('talk');break}talkIdentity(talkAskSheet);break;
+  case'talkSaveId':{const v=$('#talkAlias').value.trim();if(!v){toast('กรุณาตั้งชื่อที่แสดง');break}if(talkCheck(v)){toast(talkCheck(v));break}if(!$('#talkAgree').checked){toast('กรุณายอมรับกติกาก่อน');break}
+   S.talkAlias=v.slice(0,30);S.talkAgreed=true;save();closeSheet();const n=talkIdentity.next;talkIdentity.next=null;if(n)n();break}
+  case'talkPickTopic':document.querySelectorAll('#tTopic .chip').forEach(b=>b.setAttribute('aria-pressed',String(b===el)));break;
+  case'talkSubmitQ':{const title=$('#tq').value.trim(),body=$('#tb').value.trim(),pick=document.querySelector('#tTopic [aria-pressed="true"]'),topic=pick?pick.dataset.k:'ทั่วไป';
+   if(title.length<4){toast('หัวข้อคำถามสั้นเกินไป');break}const bad=talkCheck(title+' '+body);if(bad){toast(bad);break}
+   el.disabled=true;talkApi().then(api=>api.ask({title,body,topic,alias:S.talkAlias})).then(q=>{Talk.qs=[q,...(Talk.qs||[])];closeSheet();toast('โพสต์คำถามแล้ว 🙏');if(curView!=='talk')location.hash='talk';else renderView()}).catch(()=>{el.disabled=false;toast('โพสต์ไม่สำเร็จ ลองใหม่อีกครั้ง')});break}
+  case'talkOpen':sub={type:'q',id};renderView();window.scrollTo(0,0);break;
+  case'talkReply':{if(!isPremium()){paywall('talk');break}const body=$('#talkReplyBox').value.trim();if(!body)break;const bad=talkCheck(body);if(bad){toast(bad);break}
+   talkIdentity(()=>{el.disabled=true;talkApi().then(api=>api.answer(id,{body,alias:S.talkAlias})).then(a=>{(Talk.threads[id]=Talk.threads[id]||[]).push(a);const q=(Talk.qs||[]).find(q=>q.id===id);if(q)q.answers=(q.answers||0)+1;renderView();toast('ส่งคำตอบแล้ว อนุโมทนาสาธุ')}).catch(()=>{el.disabled=false;toast('ส่งไม่สำเร็จ ลองใหม่อีกครั้ง')})});break}
+  case'talkSadhu':{if(!isPremium()){paywall('talk');break}const kind=el.dataset.kind,k=kind+':'+id,on=!Talk.mine.has(k);on?Talk.mine.add(k):Talk.mine.delete(k);
+   const item=kind==='q'?(Talk.qs||[]).find(x=>x.id===id):Object.values(Talk.threads).flat().find(x=>x.id===id);if(item)item.sadhu=Math.max(0,(item.sadhu||0)+(on?1:-1));renderView();
+   talkApi().then(api=>api.sadhu(kind,id,on)).catch(()=>toast('บันทึกสาธุไม่สำเร็จ'));break}
+  case'talkMore':talkMoreSheet(el.dataset.kind,id,el.dataset.uid);break;
+  case'talkReport':talkApi().then(api=>api.report(el.dataset.kind,id,el.dataset.reason)).then(()=>{closeSheet();toast('ได้รับรายงานแล้ว ขอบคุณที่ช่วยดูแลห้อง')}).catch(()=>toast('รายงานไม่สำเร็จ ลองใหม่อีกครั้ง'));break;
+  case'talkBlock':S.blocked=[...new Set([...(S.blocked||[]),el.dataset.uid])];save();closeSheet();renderView();toast('ซ่อนโพสต์จากผู้ใช้นี้แล้ว');break;
+  case'talkDelete':{const kind=el.dataset.kind;talkApi().then(api=>api.remove(kind,id)).then(()=>{closeSheet();if(kind==='q'){Talk.qs=Talk.qs.filter(x=>x.id!==id);sub=null}else{for(const k in Talk.threads)Talk.threads[k]=Talk.threads[k].filter(x=>x.id!==id)}renderView();toast('ลบแล้ว')}).catch(()=>toast('ลบไม่สำเร็จ'));break}
+  case'talkFilter':Talk.filter=el.dataset.k;renderView();break;
+  case'talkRefresh':Talk.threads={};talkLoad();break;
   case'installTTS':if(window.NATIVE)NATIVE.openInstall();break;
   case'askNotif':if(window.NATIVE){NATIVE.requestNotif().then(ok=>{toast(ok?'เปิดการแจ้งเตือนแล้ว':'ยังไม่ได้รับอนุญาต เปิดได้ที่การตั้งค่าของเครื่อง');nativeSchedule()});break}try{if(!('Notification'in window))throw 0;Notification.requestPermission().then(p=>{toast(p==='granted'?'เปิดการแจ้งเตือนแล้ว':'เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน');checkNotify()}).catch(()=>toast('เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน'))}catch(x){toast('เบราว์เซอร์ไม่รองรับ จะแจ้งเตือนภายในแอปแทน')}break;
  }});

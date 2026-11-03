@@ -1,0 +1,8 @@
+/* Bhāvanā app settings.
+   สนทนาธรรม (community room): paste your Supabase project URL and anon (public) key here.
+   Supabase › Project Settings › API. The anon key is meant to ship inside apps; never put the service_role key here.
+   Leave empty to hide the room's server features. */
+window.BHAVANA_CONFIG = {
+  supabaseUrl: '',
+  supabaseAnonKey: '',
+};
