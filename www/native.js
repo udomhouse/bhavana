@@ -5,7 +5,7 @@
   if (!Cap || !Cap.isNativePlatform || !Cap.isNativePlatform()) { window.NATIVE = null; return; }
   const plug = (n) => Cap.registerPlugin(n);
   const TTS = plug('TextToSpeech'), LN = plug('LocalNotifications'), Pref = plug('Preferences'),
-    KA = plug('KeepAwake'), SB = plug('StatusBar'), App = plug('App'), Hap = plug('Haptics'), Splash = plug('SplashScreen');
+    KA = plug('KeepAwake'), IAP = plug('NativePurchases'), SB = plug('StatusBar'), App = plug('App'), Hap = plug('Haptics'), Splash = plug('SplashScreen');
   const quiet = (p) => (p && p.catch ? p.catch(() => {}) : p);
 
   const N = {
@@ -40,6 +40,24 @@
     /* durable storage (WebView localStorage can be cleared by the OS) */
     async restore() { try { const { value } = await Pref.get({ key: 'state' }); return value ? JSON.parse(value) : null; } catch (e) { return null; } },
     persist(state) { quiet(Pref.set({ key: 'state', value: JSON.stringify(state) })); },
+
+    /* Premium: one-time "Non-Consumable" in-app purchase, same product id in App Store Connect and Google Play */
+    PRODUCT: 'premium_lifetime',
+    async premiumStatus() {   // true / false, or null when the store can't be reached (keep the cached value)
+      try {
+        const { purchases } = await IAP.getPurchases({ productType: 'inapp', onlyCurrentEntitlements: true });
+        return purchases.some((p) => p.productIdentifier === N.PRODUCT && (N.platform === 'ios' || p.purchaseState === undefined || String(p.purchaseState) === '1'));
+      } catch (e) { return null; }
+    },
+    async premiumPrice() {    // localized price from the store, e.g. "A$1.99" or "฿49.00"
+      try { return (await IAP.getProduct({ productIdentifier: N.PRODUCT, productType: 'inapp' })).product.priceString || null; } catch (e) { return null; }
+    },
+    async buyPremium() {
+      const t = await IAP.purchaseProduct({ productIdentifier: N.PRODUCT, productType: 'inapp', quantity: 1 });
+      if (t && t.productIdentifier === N.PRODUCT) return true;
+      return !!(await N.premiumStatus());
+    },
+    async restorePremium() { try { await IAP.restorePurchases(); } catch (e) {} return !!(await N.premiumStatus()); },
 
     /* notifications */
     async requestNotif() { try { return (await LN.requestPermissions()).display === 'granted'; } catch (e) { return false; } },

@@ -204,7 +204,7 @@ const ic=(n,cls='')=>`<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke
 function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2400)}
 
 /* ============ state & persistence ============ */
-const DEF={playlists:[],favs:[],favTopics:[],sessions:[],settings:{fs:22,speed:1,voice:'lay',praNotif:true,streakNotif:true,bellEnd:3,ambient:'none'},dismiss:{},seeded:false,chantDays:{}};
+const DEF={playlists:[],favs:[],favTopics:[],sessions:[],settings:{fs:22,speed:1,voice:'lay',praNotif:true,streakNotif:true,bellEnd:3,ambient:'none',simFree:false},dismiss:{},seeded:false,chantDays:{},premium:false,freeLog:{}};
 let S=JSON.parse(JSON.stringify(DEF));
 const LS='bhavana.v1';
 let hadLocal=false;
@@ -370,6 +370,7 @@ function step(){
   if(!P||!P.playing)return;
   hush();
   if(P.li>=P.lines.length){return nextChant(true)}
+  {const it=P.items[P.ci];if(P.li===0&&it.id&&!allowChant(it.id)){P.playing=false;stopDrone();stopMusic();if(window.NATIVE&&!MT.run)NATIVE.allowSleep();updatePlayerUI();paywall('limit');return}}
   const ln=P.lines[P.li];hilite();
   const mode=P.story?'lay':S.settings.voice;const sp=S.settings.speed;
   const rec=mode!=='music'&&!P.recFail&&recFor(P.items[P.ci]);
@@ -494,6 +495,7 @@ function vHome(){
    <div class="qitems"><span class="qi ${q1?'done':''}"><i>${q1?'✓':''}</i>สวดมนต์ ๑ บท</span><span class="qi ${q2?'done':''}"><i>${q2?'✓':''}</i>นั่งสมาธิ ๕ นาที (${todayMin}′)</span></div></div>
    <button class="btn sm" data-act="${q1?'go':'time'}" data-n="5" data-v="meditation">${q1?'ไปนั่งสมาธิ':'สวด ๕ นาที'}</button></div>
   <div class="strip">
+   ${isPremium()?"":`<button class="tile" data-act="paywall" data-k="limit"><div class="ic" style="background:linear-gradient(135deg,var(--lilac),var(--pink))">🪷</div><div><b>สวดฟรีวันนี้เหลือ ${freeLeft()}/${FREE_PER_DAY} บท</b><span>อัปเกรด Premium สวดไม่จำกัด · จ่ายครั้งเดียว</span></div></button>`}
    <div class="tile"><div class="ic" style="background:linear-gradient(135deg,var(--sun),var(--peach))">${ic('moon')}</div><div><b>${isPra?'วันนี้วันพระ':'วันพระถัดไป'}</b><span>${np?thDate(np.day,true)+' · '+np.label+(isPra?'':' · อีก '+(np.day-tn)+' วัน'):''}</span></div></div>
    <a class="tile" href="#radio" style="text-decoration:none"><div class="ic" style="background:linear-gradient(135deg,var(--sky),var(--lilac))">${ic('radio')}</div><div><b>วิทยุบทสวด</b><span>สุ่มบทสวดเล่นต่อเนื่อง กดแล้วฟังยาว ๆ</span></div></a>
   </div>
@@ -654,6 +656,8 @@ function timeSheet(n){const tag=timeSheet.tag||null;const items=buildByTime(n,ta
 function addToSheet(id){sheet(`<h3>เพิ่ม “${esc(C[id].t)}”</h3><p class="muted small" style="margin:0">เลือก Praylist บทสวดจะถูกจัดลำดับให้อัตโนมัติ</p><div class="list" style="margin-top:8px">${S.playlists.map(p=>`<button class="rowi" style="width:100%" data-act="addToPl" data-pl="${p.id}" data-id="${id}"><div class="main"><b>${esc(p.name)}</b><span>${p.items.length} บท${p.items.some(i=>i.id===id)?' · มีบทนี้แล้ว':''}</span></div>${ic('plus').replace('<svg','<svg style="width:20px"')}</button>`).join('')}</div>
  <div class="sticky-foot"><button class="btn ghost" data-act="closeSheet">ปิด</button><button class="btn" data-act="newPlWith" data-id="${id}">${ic('plus')} Praylist ใหม่</button></div>`)}
 function settingsSheet(){const s=S.settings;sheet(`<h3>ตั้งค่า</h3>
+ <div class="card" style="margin-top:10px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b>${isPremium()?'Premium 🪷':'เวอร์ชันฟรี'}</b><div class="muted small">${isPremium()?'ปลดล็อกทุกฟีเจอร์แล้ว ขอบคุณที่สนับสนุน':'สวดฟรีวันละ '+FREE_PER_DAY+' บท · วันนี้เหลือ '+freeLeft()+' บท'}</div></div>${isPremium()&&window.NATIVE?'':`<div class="hstack">${isPremium()?'':'<button class="btn sm" data-act="paywall" data-k="">อัปเกรด</button>'}<button class="btn sm ghost" data-act="restorePremium">กู้คืนการซื้อ</button></div>`}</div>
+ ${window.NATIVE?'':toggleRow('simFree','จำลองผู้ใช้ฟรี (เฉพาะเว็บ)','ลองดูประสบการณ์ของผู้ใช้ที่ยังไม่ซื้อ Premium')}
  <div class="field"><label>เสียงสวดเริ่มต้น</label><div class="seg">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${s.voice===k}">${l}</button>`).join('')}</div></div>
  <div class="field"><label for="setSpd">ความเร็วเสียงสวด <b id="setSpdV">${s.speed.toFixed(1)}×</b></label><input type="range" id="setSpd" min="0.5" max="1.6" step="0.1" value="${s.speed}"></div>
  <div class="field"><label for="setFs">ขนาดตัวอักษรบทสวด <b id="setFsV">${s.fs}px</b></label><input type="range" id="setFs" min="16" max="40" step="1" value="${s.fs}"><div id="fsPrev" style="font-family:var(--f-chant);font-size:${s.fs}px;line-height:1.6">อิติปิ โส ภะคะวา อะระหัง</div></div>
@@ -663,9 +667,28 @@ function settingsSheet(){const s=S.settings;sheet(`<h3>ตั้งค่า</h3
  $('#setSpd').oninput=e=>{s.speed=+e.target.value;$('#setSpdV').textContent=s.speed.toFixed(1)+'×';save()};
  $('#setFs').oninput=e=>{s.fs=+e.target.value;$('#setFsV').textContent=s.fs+'px';$('#fsPrev').style.fontSize=s.fs+'px';save()}}
 
+/* ============ premium ============ */
+const FREE_PER_DAY=3,PRICE_FALLBACK='1.99 AUD · ประมาณ ฿49';
+// In the phone app, Premium comes from the App Store / Google Play. The web preview is unlocked unless "จำลองผู้ใช้ฟรี" is on.
+const isPremium=()=>window.NATIVE?!!S.premium:!S.settings.simFree;
+function freeToday(){const d=ymd(new Date());S.freeLog=S.freeLog||{};if(!S.freeLog[d])S.freeLog={[d]:[]};return S.freeLog[d]}
+const freeLeft=()=>Math.max(0,FREE_PER_DAY-freeToday().length);
+function allowChant(id){if(isPremium())return true;const t=freeToday();if(t.includes(id))return true;if(t.length<FREE_PER_DAY){t.push(id);save();return true}return false}
+const PAY_REASON={limit:['วันนี้สวดฟรีครบ ๓ บทแล้ว','สวดต่อได้ไม่จำกัดด้วย Premium หรือกลับมาสวดฟรีใหม่พรุ่งนี้'],fav:['รายการโปรดเป็นฟีเจอร์ Premium','เก็บบทสวดและธรรมะที่ชอบไว้ฟังได้ทันที'],praylist:['สร้าง Praylist ของตัวเองด้วย Premium','เลือกบทสวดเอง แอปเรียงลำดับขั้นการสวดให้อัตโนมัติ']};
+let premiumPrice=null;
+function paywall(reason){const r=PAY_REASON[reason]||['Bhāvanā Premium','ปลดล็อกทุกฟีเจอร์'];
+  sheet(`<div style="text-align:center"><div class="bd" style="width:64px;height:64px;border-radius:50%;margin:4px auto 10px;display:grid;place-items:center;font-size:30px;background:linear-gradient(135deg,var(--sky),var(--lilac) 55%,var(--pink))">🪷</div>
+   <div class="eyebrow">Bhāvanā Premium</div><h3>${r[0]}</h3><p class="muted" style="margin:0 0 14px">${r[1]}</p></div>
+   <div class="card" style="display:flex;flex-direction:column;gap:10px">${[['📿','สวดได้ไม่จำกัด','เวอร์ชันฟรีสวดได้วันละ '+FREE_PER_DAY+' บท'],['💛','รายการโปรด','เก็บบทสวดและหัวข้อธรรมที่ชอบ'],['🎧','Praylist ของตัวเอง','จัดชุดบทสวดเอง เรียงขั้นตอนถูกต้องให้อัตโนมัติ'],['♾️','จ่ายครั้งเดียว ใช้ได้ตลอดไป','ไม่มีค่าสมาชิกรายเดือน']].map(([e,t,d])=>`<div style="display:flex;gap:12px;align-items:center"><span style="font-size:22px">${e}</span><div><b>${t}</b><div class="muted small">${d}</div></div></div>`).join('')}</div>
+   <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px"><button class="btn" data-act="buyPremium">ปลดล็อก Premium · ${esc(premiumPrice||PRICE_FALLBACK)}</button>
+   <button class="btn ghost" data-act="restorePremium">กู้คืนการซื้อ</button><button class="btn ghost" data-act="closeSheet">ไว้ทีหลัง</button></div>
+   <p class="muted small" style="text-align:center;margin:12px 0 0">${window.NATIVE?'ชำระผ่านบัญชี '+(NATIVE.platform==='ios'?'Apple ID':'Google Play')+' ของคุณ เปลี่ยนเครื่องใหม่ให้กด "กู้คืนการซื้อ"':'หน้านี้เป็นตัวอย่างบนเว็บ การซื้อจริงทำได้ในแอป Bhāvanā บน iPhone และ Android'}</p>`)}
+function setPremium(v){if(v===null||v===undefined)return;if(!!S.premium!==v){S.premium=v;save();renderView()}}
+
 /* ============ events ============ */
-document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.tog;if(k){S.settings[k]=e.target.checked;save();nativeSchedule();if(k==='praNotif'&&e.target.checked)checkNotify()}});
+document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.tog;if(k){S.settings[k]=e.target.checked;save();nativeSchedule();if(k==='simFree'){renderView();settingsSheet()}if(k==='praNotif'&&e.target.checked)checkNotify()}});
 document.addEventListener('click',e=>{const tb=e.target.closest('.tab');if(tb&&tb.getAttribute('href')==='#'+curView){sub=null;renderView();window.scrollTo(0,0);return}const el=e.target.closest('[data-act]');if(!el)return;const a=el.dataset.act,id=el.dataset.id;
+ if(!isPremium()){if(['fav','favTopic','favCur'].includes(a)){paywall('fav');return}if(['addTo','newPl','newPlWith','editPl','copySet','saveMood','savePreview','savePl'].includes(a)){paywall('praylist');return}}
  if(a==='scrim'&&e.target!==el)return;
  switch(a){
   case'scrim':case'closeSheet':closeSheet();break;
@@ -719,6 +742,11 @@ document.addEventListener('click',e=>{const tb=e.target.closest('.tab');if(tb&&t
   case'mbell':bell(1);break;
   case'amb':S.settings.ambient=el.dataset.v;save();if(MT.run){stopDrone();if(S.settings.ambient!=='none')startDrone(S.settings.ambient)}renderView();break;
   case'cal':calM.m+=+el.dataset.d;if(calM.m<0){calM.m=11;calM.y--}if(calM.m>11){calM.m=0;calM.y++}renderView();break;
+  case'buyPremium':if(!window.NATIVE){toast('ซื้อ Premium ได้ในแอป Bhāvanā บน iPhone และ Android');break}
+   el.disabled=true;NATIVE.buyPremium().then(ok=>{if(ok){setPremium(true);closeSheet();toast('ยินดีต้อนรับสู่ Premium 🪷')}else{el.disabled=false;toast('ยังไม่ได้ซื้อ')}}).catch(()=>{el.disabled=false;toast('การซื้อถูกยกเลิก หรือร้านค้าไม่ตอบกลับ ลองใหม่อีกครั้ง')});break;
+  case'restorePremium':if(!window.NATIVE){toast('กู้คืนการซื้อได้ในแอปบนมือถือ');break}
+   NATIVE.restorePremium().then(ok=>{setPremium(!!ok);if(ok){closeSheet();toast('กู้คืน Premium แล้ว 🪷')}else toast('ไม่พบการซื้อ Premium ในบัญชีนี้')}).catch(()=>toast('กู้คืนไม่สำเร็จ ลองใหม่อีกครั้ง'));break;
+  case'paywall':paywall(el.dataset.k);break;
   case'installTTS':if(window.NATIVE)NATIVE.openInstall();break;
   case'askNotif':if(window.NATIVE){NATIVE.requestNotif().then(ok=>{toast(ok?'เปิดการแจ้งเตือนแล้ว':'ยังไม่ได้รับอนุญาต เปิดได้ที่การตั้งค่าของเครื่อง');nativeSchedule()});break}try{if(!('Notification'in window))throw 0;Notification.requestPermission().then(p=>{toast(p==='granted'?'เปิดการแจ้งเตือนแล้ว':'เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน');checkNotify()}).catch(()=>toast('เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน'))}catch(x){toast('เบราว์เซอร์ไม่รองรับ จะแจ้งเตือนภายในแอปแทน')}break;
  }});
@@ -734,9 +762,10 @@ buildPra();
 window.addEventListener('hashchange',route);
 if(location.protocol!=='file:')fetch('audio/manifest.json').then(r=>r.ok?r.json():{}).then(j=>{window.AUDIO=j}).catch(()=>{});
 window.onNativeBack=()=>{if($('#overlay').innerHTML){P&&P.open?closePlayer():closeSheet();return true}if(sub){sub=null;renderView();return true}if(curView!=='home'){location.hash='home';return true}return false};
-window.onNativeResume=()=>{renderView();nativeSchedule()};
+window.onNativeResume=()=>{renderView();nativeSchedule();NATIVE.premiumStatus().then(setPremium)};
 (async()=>{
   if(window.NATIVE&&!hadLocal){try{const o=await NATIVE.restore();if(o)S={...DEF,...o,settings:{...DEF.settings,...(o.settings||{})}}}catch(e){}}
   route();checkNotify();initCloud();
-  if(window.NATIVE){await NATIVE.init();if(NATIVE.ttsReady===false)ttsOK=false;else if(NATIVE.ttsReady)ttsOK=true;nativeSchedule(true)}
+  if(window.NATIVE){await NATIVE.init();if(NATIVE.ttsReady===false)ttsOK=false;else if(NATIVE.ttsReady)ttsOK=true;nativeSchedule(true);
+    NATIVE.premiumStatus().then(setPremium);NATIVE.premiumPrice().then(p=>{if(p)premiumPrice=p})}
 })();
