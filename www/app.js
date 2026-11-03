@@ -662,6 +662,7 @@ function settingsSheet(){const s=S.settings;sheet(`<h3>ตั้งค่า</h3
  <div class="field"><label for="setSpd">ความเร็วเสียงสวด <b id="setSpdV">${s.speed.toFixed(1)}×</b></label><input type="range" id="setSpd" min="0.5" max="1.6" step="0.1" value="${s.speed}"></div>
  <div class="field"><label for="setFs">ขนาดตัวอักษรบทสวด <b id="setFsV">${s.fs}px</b></label><input type="range" id="setFs" min="16" max="40" step="1" value="${s.fs}"><div id="fsPrev" style="font-family:var(--f-chant);font-size:${s.fs}px;line-height:1.6">อิติปิ โส ภะคะวา อะระหัง</div></div>
  <div class="field"><label>การแจ้งเตือน</label>${toggleRow('praNotif','แจ้งเตือนวันพระ','แสดงล่วงหน้า ๑ วัน และในวันพระ')}${toggleRow('streakNotif','เตือนรักษาสตรีค','เตือนหลัง ๑๘.๐๐ น.')}</div>
+ <div class="field"><label>เครดิต</label><div class="muted small" style="line-height:1.7">ฟอนต์ตัวบท ChulaNarak © 2004 Thai Electronic Publishing Club (TEPC) ออกแบบโดย จักรินทร์ สิงห์หนู<br>ฟอนต์ Mitr, Anuphan, Noto Serif Thai, Cormorant Garamond · SIL Open Font License<br>เสียงสวดและเสียงบรรยาย: Microsoft Azure Neural Voice "Niwat"</div></div>
  <p class="muted small">วันพระคำนวณจากดิถีจันทร์ทางดาราศาสตร์ (เวลาประเทศไทย) อาจคลาดจากปฏิทินหลวงได้ ๑ วันในบางเดือน${ttsOK===false?' · อุปกรณ์นี้ยังไม่มีเสียงอ่านภาษาไทย แอปจะไล่ข้อความทีละคำให้สวดตามแทน':''}</p>
  <div class="sticky-foot"><span></span><button class="btn" data-act="closeSheet">เสร็จ</button></div>`);
  $('#setSpd').oninput=e=>{s.speed=+e.target.value;$('#setSpdV').textContent=s.speed.toFixed(1)+'×';save()};
