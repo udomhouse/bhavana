@@ -49,7 +49,7 @@ def load_texts():
     return json.loads(js.stdout)
 
 def spoken_text(line):
-    t = line.replace('ฯ', '')
+    t = line.replace('ฯ', '').replace('ฺ', '')   # phinthu (เทฺวเม) confuses the voice; drop it
     t = re.sub(r'[;:()"“”]', ' ', t)
     return re.sub(r'\s+', ' ', t).strip()
 
