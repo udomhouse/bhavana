@@ -78,6 +78,7 @@ def load_texts():
 def spoken_text(t):
     t = t.replace('ฯ', '').replace('ฺ', '').replace('-', ' ')   # phinthu confuses the voice; ยะ-ธา-พุท is read per syllable
     t = re.sub(r'[;:()"“”]', ' ', t)
+    t = re.sub(r'(\S+?)ๆ', r'\1 \1', t)   # ไม้ยมก: เพ็งๆ → เพ็ง เพ็ง
     for a, b in PRONOUNCE.items():
         t = t.replace(a, b)
     return re.sub(r'\s+', ' ', t).strip()
