@@ -15,3 +15,4 @@ ios/App/Pods/
 ios/App/build/
 ios/DerivedData/
 xcuserdata/
+scripts/.tts-cache/
