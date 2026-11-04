@@ -725,7 +725,8 @@ function settingsSheet(){const s=S.settings;sheet(`<h3>ตั้งค่า</h3
  <div class="field"><label for="setSpd">ความเร็วเสียงสวด <b id="setSpdV">${s.speed.toFixed(1)}×</b></label><input type="range" id="setSpd" min="0.5" max="1.6" step="0.1" value="${s.speed}"></div>
  <div class="field"><label for="setFs">ขนาดตัวอักษรบทสวด <b id="setFsV">${s.fs}px</b></label><input type="range" id="setFs" min="16" max="40" step="1" value="${s.fs}"><div id="fsPrev" style="font-family:var(--f-chant);font-size:${s.fs}px;line-height:1.6">อิติปิ โส ภะคะวา อะระหัง</div></div>
  <div class="field"><label>การแจ้งเตือน</label>${toggleRow('praNotif','แจ้งเตือนวันพระ','แสดงล่วงหน้า ๑ วัน และในวันพระ')}${toggleRow('streakNotif','เตือนรักษาสตรีค','เตือนหลัง ๑๘.๐๐ น.')}</div>
- <div class="field"><label>เครดิต</label><div class="muted small" style="line-height:1.7">ฟอนต์ตัวบท ChulaNarak © 2004 Thai Electronic Publishing Club (TEPC) ออกแบบโดย จักรินทร์ สิงห์หนู<br>ฟอนต์ Mitr, Anuphan, Noto Serif Thai, Cormorant Garamond · SIL Open Font License<br>เสียงสวดและเสียงบรรยาย: Microsoft Azure AI Voice "Nattapong"</div></div>
+ <div class="field"><label>ข้อมูลของฉัน</label><div class="muted small" style="margin-bottom:8px">ข้อมูลสวดมนต์ สมาธิ และ Praylist เก็บอยู่ในเครื่องนี้เท่านั้น ส่วนโพสต์ในห้องสนทนาธรรมเก็บบนเซิร์ฟเวอร์</div><button class="btn ghost sm" data-act="talkWipe">ลบโพสต์และบัญชีห้องสนทนาของฉัน</button></div>
+ <div class="field"><label>เครดิต</label><div class="muted small" style="line-height:1.7">พัฒนาโดย Udom House<br>ฟอนต์ตัวบท ChulaNarak © 2004 Thai Electronic Publishing Club (TEPC) ออกแบบโดย จักรินทร์ สิงห์หนู<br>ฟอนต์ Mitr, Anuphan, Noto Serif Thai, Cormorant Garamond · SIL Open Font License<br>เสียงสวดและเสียงบรรยาย: Microsoft Azure AI Voice "Nattapong"</div></div>
  <p class="muted small">วันพระคำนวณจากดิถีจันทร์ทางดาราศาสตร์ (เวลาประเทศไทย) อาจคลาดจากปฏิทินหลวงได้ ๑ วันในบางเดือน${ttsOK===false?' · อุปกรณ์นี้ยังไม่มีเสียงอ่านภาษาไทย แอปจะไล่ข้อความทีละคำให้สวดตามแทน':''}</p>
  <div class="sticky-foot"><span></span><button class="btn" data-act="closeSheet">เสร็จ</button></div>`);
  $('#setSpd').oninput=e=>{s.speed=+e.target.value;$('#setSpdV').textContent=s.speed.toFixed(1)+'×';save()};
@@ -767,7 +768,8 @@ function supaAdapter(cfg){
     async sadhu(kind,id,on){if(on)await q('reactions',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({target_type:kind,target_id:+id})});
       else await q('reactions?target_type=eq.'+kind+'&target_id=eq.'+id,{method:'DELETE',headers:{Prefer:'return=minimal'}})},
     async report(kind,id,reason){await q('reports',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({target_type:kind,target_id:+id,reason})})},
-    async remove(kind,id){await q((kind==='q'?'questions':'answers')+'?id=eq.'+id,{method:'DELETE',headers:{Prefer:'return=minimal'}})}
+    async remove(kind,id){await q((kind==='q'?'questions':'answers')+'?id=eq.'+id,{method:'DELETE',headers:{Prefer:'return=minimal'}})},
+    async removeMine(){const me=(await token()).uid;for(const t of ['answers?author=eq.','questions?author=eq.','reactions?user_id=eq.'])await q(t+me,{method:'DELETE',headers:{Prefer:'return=minimal'}});S.talkAuth=null;save()}
   };
 }
 async function dbAdapter(){
@@ -788,7 +790,8 @@ async function dbAdapter(){
     async answer(qid,d){const doc={q:qid,body:d.body,alias:d.alias,uid:me,at:Date.now()};const r=await db.collection('talk_a').add(doc);return {id:r.id,...doc,sadhu:0}},
     async sadhu(kind,id,on){const ref=db.doc('talk_s/'+kind+'_'+id+'_'+me);if(on)await ref.set({kind,tid:id,uid:me,at:Date.now()});else await ref.delete()},
     async report(kind,id,reason){await db.doc('talk_r/'+kind+'_'+id+'_'+me).set({kind,tid:id,reason,uid:me,at:Date.now()})},
-    async remove(kind,id){await db.doc((kind==='q'?'talk_q/':'talk_a/')+id).delete()}
+    async remove(kind,id){await db.doc((kind==='q'?'talk_q/':'talk_a/')+id).delete()},
+    async removeMine(){for(const c of ['talk_a','talk_q','talk_s']){const s=await db.collection(c).where('uid','==',me).limit(1000).get();for(const d of s.docs)await db.doc(c+'/'+d.id).delete()}}
   };
 }
 async function talkApi(){
@@ -953,6 +956,7 @@ document.addEventListener('click',e=>{const tb=e.target.closest('.tab');if(tb&&t
   case'talkBlock':S.blocked=[...new Set([...(S.blocked||[]),el.dataset.uid])];save();closeSheet();renderView();toast('ซ่อนโพสต์จากผู้ใช้นี้แล้ว');break;
   case'talkDelete':{const kind=el.dataset.kind;talkApi().then(api=>api.remove(kind,id)).then(()=>{closeSheet();if(kind==='q'){Talk.qs=Talk.qs.filter(x=>x.id!==id);sub=null}else{for(const k in Talk.threads)Talk.threads[k]=Talk.threads[k].filter(x=>x.id!==id)}renderView();toast('ลบแล้ว')}).catch(()=>toast('ลบไม่สำเร็จ'));break}
   case'talkFilter':Talk.filter=el.dataset.k;renderView();break;
+  case'talkWipe':if(!el.dataset.confirm){el.dataset.confirm=1;el.textContent='กดอีกครั้งเพื่อยืนยัน ลบถาวร';break}el.disabled=true;talkApi().then(api=>{if(!api)throw 0;return api.removeMine()}).then(()=>{Talk.qs=null;Talk.threads={};Talk.api=undefined;S.talkAlias=null;S.talkAgreed=false;save();closeSheet();toast('ลบโพสต์และบัญชีห้องสนทนาของคุณแล้ว')}).catch(()=>{el.disabled=false;toast('ลบไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่')});break;
   case'talkRefresh':Talk.threads={};talkLoad();break;
   case'installTTS':if(window.NATIVE)NATIVE.openInstall();break;
   case'askNotif':if(window.NATIVE){NATIVE.requestNotif().then(async ok=>{notifPerm=await NATIVE.notifState()||(ok?'granted':'denied');toast(ok?'เปิดการแจ้งเตือนแล้ว 🔔':'ยังไม่ได้รับอนุญาต เปิดได้ที่ ตั้งค่า › แอป › Bhāvanā › การแจ้งเตือน');nativeSchedule();renderView()});break}try{if(!('Notification'in window))throw 0;Notification.requestPermission().then(p=>{toast(p==='granted'?'เปิดการแจ้งเตือนแล้ว':'เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน');checkNotify()}).catch(()=>toast('เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน'))}catch(x){toast('เบราว์เซอร์ไม่รองรับ จะแจ้งเตือนภายในแอปแทน')}break;
