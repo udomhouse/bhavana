@@ -40,8 +40,8 @@ TIGHTEN = (0.16, 0.07)     # inside a phrase, breaths longer than 0.16 s become 
 # gap pause at line end · stretch slows the slow style a little afterwards (pitch kept) · echo room echo.
 # The voice's natural pace is close to 300 ms per syllable, so the normal style barely changes its speed.
 STYLES = {
-    'lay':   dict(even=True, syl_ms=280, comma_ms=700, gap=1500, echo=False, start_rate=1.0),
-    'monk':  dict(even=True, syl_ms=280, comma_ms=650, gap=1350, echo=True,  start_rate=1.0, stretch=0.88),
+    'lay':   dict(even=True, syl_ms=280, comma_ms=700, gap=1000, echo=False, start_rate=1.0),
+    'monk':  dict(even=True, syl_ms=280, comma_ms=650, gap=880,  echo=True,  start_rate=1.0, stretch=0.88),
     'topic': dict(even=False, rate=1.0, gap=900, echo=False),
 }
 PASSES = 4   # the voice reacts unevenly to speed changes: try gently, keep each phrase's closest take
