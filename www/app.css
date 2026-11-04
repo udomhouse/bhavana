@@ -3,6 +3,9 @@ html{padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
 body{margin:0;overscroll-behavior-y:none;-webkit-tap-highlight-color:transparent}
 img{max-width:100%}
 [hidden]{display:none!important}
+/* phone: the page only ever scrolls up and down */
+html,body{max-width:100%;overflow-x:hidden;overscroll-behavior-x:none}
+input,textarea,select{font-size:16px!important}   /* iPhone zooms into fields smaller than 16px */
 /* Layout: playful Apple-Music-style shell. Phone: content + mini player + floating pill tab bar. Desktop: left sidebar. Navy & white base, pastel "pop" accents for youth. */
 :root{
   --bg:#FFFFFF; --bg2:#F1F4FB; --card:#FFFFFF; --fg:#0D1B3D; --fg2:#58658A; --line:#E2E7F2;
