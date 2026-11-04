@@ -63,7 +63,11 @@
     async restorePremium() { try { await IAP.restorePurchases(); } catch (e) {} return !!(await N.premiumStatus()); },
 
     /* notifications */
+    async notifState() { const r = await within(LN.checkPermissions()); return r ? r.display : null; },   // 'granted' | 'denied' | 'prompt' | null
     async requestNotif() { try { return (await LN.requestPermissions()).display === 'granted'; } catch (e) { return false; } },
+    async testNotif() {
+      await LN.schedule({ notifications: [{ id: 9999, title: 'Bhāvanā 🙏', body: 'การแจ้งเตือนทำงานแล้ว จะเตือนวันพระและสตรีคให้ตามเวลา', schedule: { at: new Date(Date.now() + 5000) } }] });
+    },
     // o = { pra:[{date:Date,label}], praOn, streakOn, doneToday, ask }
     async schedule(o) {
       try {

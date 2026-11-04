@@ -82,6 +82,8 @@ npm install
 
 ## ขั้นที่ 4: ส่งขึ้น App Store และ Google Play
 
+> ⚠️ **ก่อน build เพื่อส่ง Store:** เปิด `www/config.js` แล้วแก้ `testMode: true` เป็น `testMode: false` (ปิดปุ่ม "เปิด Premium ทดสอบ") แล้วรัน `npm run sync`
+
 **รหัสแอป:** `com.udomhouse.bhavana` (ตั้งไว้แล้วทั้ง ๓ ที่ ถ้าจะเปลี่ยนต้องแก้ให้ตรงกัน):
 - `capacitor.config.json` → `appId`
 - `android/app/build.gradle` → `applicationId`

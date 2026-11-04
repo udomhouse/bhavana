@@ -265,7 +265,7 @@ function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTi
 const DEF={playlists:[],favs:[],favTopics:[],sessions:[],settings:{fs:22,speed:1,voice:'lay',praNotif:true,streakNotif:true,bellEnd:3,ambient:'none',simFree:false},dismiss:{},seeded:false,chantDays:{},premium:false,freeLog:{}};
 let S=JSON.parse(JSON.stringify(DEF));
 const LS='bhavana.v1';
-let hadLocal=false;
+let hadLocal=false,notifPerm=null;
 try{const raw=localStorage.getItem(LS);if(raw){hadLocal=true;const o=JSON.parse(raw);S={...S,...o,settings:{...S.settings,...(o.settings||{})}}}}catch(e){}
 let dbDoc=null,saveT=null,dbSaving=Promise.resolve();
 function save(){
@@ -286,6 +286,7 @@ async function initCloud(){
     dbDoc=ref; if(!snap.exists)save();
   }catch(e){}
 }
+if(S.settings.voice==='music')S.settings.voice='lay'; // instrumental mode was removed
 if(!S.seeded&&!S.playlists.length){S.playlists.push({id:'p'+Date.now(),name:'สวดก่อนนอน (ตัวอย่าง)',items:[{id:'namo'},{id:'itipiso',reps:3},{id:'karaniya'},{id:'metta_self'},{id:'metta_all'}]});S.seeded=true}
 
 /* ============ ordering & builders ============ */
@@ -484,7 +485,7 @@ function openPlayer(){if(!P)return;P.open=true;const o=$('#overlay');o.innerHTML
   <div class="prog" id="prog"><i></i></div>
   <div class="row"><button class="cbtn" data-act="prev" aria-label="บทก่อนหน้า">${ic('prev')}</button><button class="cbtn play" id="pPlay" data-act="toggle" aria-label="เล่น/หยุด"></button><button class="cbtn" data-act="next" aria-label="บทถัดไป">${ic('next')}</button></div>
   <div class="row2">
-   <div class="seg" role="group" aria-label="เสียง" id="voiceSeg">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
+   <div class="seg" role="group" aria-label="เสียง" id="voiceSeg">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
    <label class="ctl" for="spd">ความเร็ว <input id="spd" type="range" min="0.5" max="1.6" step="0.1" value="${S.settings.speed}"><b id="spdv">${S.settings.speed.toFixed(1)}×</b></label>
    <label class="ctl" for="fsz">ตัวอักษร <input id="fsz" type="range" min="16" max="40" step="1" value="${S.settings.fs}"></label>
   </div>
@@ -542,6 +543,7 @@ function vHome(){
   let banner='';
   if(S.settings.praNotif&&np&&np.day-tn<=1&&!S.dismiss['pra'+np.day])banner=`<div class="banner">${ic('moon')}<div><b>${isPra?'วันนี้วันพระ':'พรุ่งนี้วันพระ'}</b> · ${np.label} ชวนสวดมนต์ รักษาศีล ทำบุญ</div><button class="x" data-act="dismiss" data-k="pra${np.day}" aria-label="ปิด">${ic('x')}</button></div>`;
   else if(S.settings.streakNotif&&st>0&&!todayMin&&hr>=18&&!S.dismiss['st'+tn])banner=`<div class="banner">${ic('flame')}<div>สตรีค ${st} วันยังรออยู่ นั่งสมาธิ ๕ นาทีเพื่อไม่ให้ไฟดับ</div><button class="x" data-act="dismiss" data-k="st${tn}" aria-label="ปิด">${ic('x')}</button></div>`;
+  if(!banner&&window.NATIVE&&notifPerm&&notifPerm!=='granted'&&!S.dismiss.notif)banner=`<div class="banner">${ic('bell')}<div><b>เปิดการแจ้งเตือน</b> · ให้แอปเตือนวันพระและเตือนรักษาสตรีค${notifPerm==='denied'?'<div class="small muted">ไปที่ ตั้งค่า › แอป › Bhāvanā › การแจ้งเตือน แล้วเปิด “อนุญาตการแจ้งเตือน”</div>':''}</div>${notifPerm==='denied'?'':`<button class="btn sm" data-act="askNotif">เปิด</button>`}<button class="x" data-act="dismiss" data-k="notif" aria-label="ปิด">${ic('x')}</button></div>`;
   const m=mood&&MOODS.find(x=>x.k===mood);
   return `<div class="topbar"><div style="min-width:0"><div class="eyebrow">${thDate(tn)} · ${lunarOf(tn)}</div><h1 class="big">${greet}</h1></div><div class="r"><button class="pill" data-act="go" data-v="meditation" aria-label="สตรีค ${st} วัน"><span class="fl">🔥</span>${st}</button><button class="iconbtn" data-act="settings" aria-label="ตั้งค่า">${ic('gear')}</button></div></div>
   ${banner}
@@ -638,7 +640,7 @@ function vRadio(){const on=P&&P.radio;const it=on?P.items[P.ci]:null;
   <div class="radio"><div class="disc ${on&&P.playing?'spin':''}"></div>
    <div><div class="eyebrow">${on?'กำลังเล่น · สถานี'+esc(STATIONS.find(s=>s[0]===P.radio)[1]):'พร้อมออกอากาศ'}</div><h2 class="sec" style="margin-top:4px">${on?esc(titleOf(it)):'กดเล่นเพื่อเริ่มสถานี'}</h2></div>
    <div class="hstack" style="justify-content:center"><button class="btn" data-act="radioGo">${ic(on&&P.playing?'pause':'play')} ${on&&P.playing?'หยุด':'เล่นสถานี'}</button>${on?`<button class="btn ghost" data-act="next">${ic('shuffle')} สุ่มบทใหม่</button>`:''}</div>
-   <div class="seg" role="group" aria-label="เสียง">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
+   <div class="seg" role="group" aria-label="เสียง">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
   </div>`}
 
 /* meditation */
@@ -664,7 +666,7 @@ function vMed(){
   ${calHTML()}
   <div class="sechead"><h2 class="sec">การแจ้งเตือน</h2></div>
   <div class="card">${toggleRow('praNotif','แจ้งเตือนวันพระ','แสดงล่วงหน้า ๑ วัน และในวันพระ')}${toggleRow('streakNotif','เตือนรักษาสตรีค','เตือนหลัง ๑๘.๐๐ น. หากวันนี้ยังไม่ได้นั่งสมาธิ')}
-   <button class="btn ghost sm" style="margin-top:10px" data-act="askNotif">${ic('bell')} อนุญาตการแจ้งเตือนของเบราว์เซอร์</button></div>`}
+   <div class="hstack" style="margin-top:10px">${window.NATIVE?`<button class="btn ghost sm" data-act="askNotif">${ic('bell')} ${notifPerm==='granted'?'เปิดการแจ้งเตือนแล้ว ✓':'เปิดการแจ้งเตือน'}</button>${notifPerm==='granted'?`<button class="btn ghost sm" data-act="testNotif">ส่งแจ้งเตือนทดสอบ</button>`:''}`:`<button class="btn ghost sm" data-act="askNotif">${ic('bell')} อนุญาตการแจ้งเตือนของเบราว์เซอร์</button>`}</div>${window.NATIVE&&notifPerm==='denied'?'<p class="muted small" style="margin:8px 0 0">เคยปฏิเสธไว้ ต้องเปิดเองที่ ตั้งค่า › แอป › Bhāvanā › การแจ้งเตือน</p>':''}</div>`}
 function bestStreak(){const days=[...new Set(S.sessions.map(x=>dayNum(x.d)))].sort((a,b)=>a-b);let best=0,c=0,prev=null;for(const d of days){c=prev!==null&&d===prev+1?c+1:1;best=Math.max(best,c);prev=d}return best}
 function badges(){const tot=S.sessions.reduce((a,x)=>a+x.min,0),bs=bestStreak(),lng=Math.max(0,...S.sessions.map(x=>x.min)),cd=Object.keys(S.chantDays||{}).length;
  return [{e:'🌱',n:'ก้าวแรก',d:'นั่งครั้งแรก',ok:S.sessions.length>0,c:'var(--mint)'},{e:'🔥',n:'ติดไฟ',d:'ติดกัน ๓ วัน',ok:bs>=3,c:'var(--peach)'},{e:'🌙',n:'ครบสัปดาห์',d:'ติดกัน ๗ วัน',ok:bs>=7,c:'var(--lilac)'},{e:'🏔️',n:'ใจนิ่ง',d:'นั่งรวด ๓๐ นาที',ok:lng>=30,c:'var(--sky)'},{e:'💯',n:'ร้อยนาที',d:'รวม ๑๐๐ นาที',ok:tot>=100,c:'var(--pink)'},{e:'📿',n:'นักสวด',d:'สวดมนต์ ๗ วัน',ok:cd>=7,c:'var(--sun)'},{e:'🪷',n:'ติดกัน ๓๐ วัน',d:'สายบุญตัวจริง',ok:bs>=30,c:'var(--navy-b)'}]}
@@ -718,7 +720,8 @@ function addToSheet(id){sheet(`<h3>เพิ่ม “${esc(C[id].t)}”</h3><p 
 function settingsSheet(){const s=S.settings;sheet(`<h3>ตั้งค่า</h3>
  <div class="card" style="margin-top:10px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b>${isPremium()?'Premium 🪷':'เวอร์ชันฟรี'}</b><div class="muted small">${isPremium()?'ปลดล็อกทุกฟีเจอร์แล้ว ขอบคุณที่สนับสนุน':'สวดฟรีวันละ '+FREE_PER_DAY+' บท · วันนี้เหลือ '+freeLeft()+' บท'}</div></div>${isPremium()&&window.NATIVE?'':`<div class="hstack">${isPremium()?'':'<button class="btn sm" data-act="paywall" data-k="">อัปเกรด</button>'}<button class="btn sm ghost" data-act="restorePremium">กู้คืนการซื้อ</button></div>`}</div>
  ${window.NATIVE?'':toggleRow('simFree','จำลองผู้ใช้ฟรี (เฉพาะเว็บ)','ลองดูประสบการณ์ของผู้ใช้ที่ยังไม่ซื้อ Premium')}
- <div class="field"><label>เสียงสวดเริ่มต้น</label><div class="seg">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์'],['music','เพลงบรรเลง']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${s.voice===k}">${l}</button>`).join('')}</div></div>
+ ${window.NATIVE&&testMode()?`<div class="card" style="margin-top:10px;border:1px dashed var(--peach)"><b>🧪 โหมดทดสอบ</b><div class="muted small" style="margin:4px 0 10px">เปิด Premium โดยไม่ต้องซื้อ ใช้ทดสอบเท่านั้น (ปิดก่อนส่งขึ้น Store)</div><button class="btn sm" data-act="testPremium">${S.testPremium?'ปิด Premium ทดสอบ':'เปิด Premium ทดสอบ'}</button></div>`:''}
+ <div class="field"><label>เสียงสวดเริ่มต้น</label><div class="seg">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${s.voice===k}">${l}</button>`).join('')}</div></div>
  <div class="field"><label for="setSpd">ความเร็วเสียงสวด <b id="setSpdV">${s.speed.toFixed(1)}×</b></label><input type="range" id="setSpd" min="0.5" max="1.6" step="0.1" value="${s.speed}"></div>
  <div class="field"><label for="setFs">ขนาดตัวอักษรบทสวด <b id="setFsV">${s.fs}px</b></label><input type="range" id="setFs" min="16" max="40" step="1" value="${s.fs}"><div id="fsPrev" style="font-family:var(--f-chant);font-size:${s.fs}px;line-height:1.6">อิติปิ โส ภะคะวา อะระหัง</div></div>
  <div class="field"><label>การแจ้งเตือน</label>${toggleRow('praNotif','แจ้งเตือนวันพระ','แสดงล่วงหน้า ๑ วัน และในวันพระ')}${toggleRow('streakNotif','เตือนรักษาสตรีค','เตือนหลัง ๑๘.๐๐ น.')}</div>
@@ -852,7 +855,8 @@ function vTalkThread(id){const x=(Talk.qs||[]).find(q=>q.id===id);if(!x){sub=nul
 /* ============ premium ============ */
 const FREE_PER_DAY=3,PRICE_FALLBACK='1.99 AUD · ประมาณ ฿49';
 // In the phone app, Premium comes from the App Store / Google Play. The web preview is unlocked unless "จำลองผู้ใช้ฟรี" is on.
-const isPremium=()=>window.NATIVE?!!S.premium:!S.settings.simFree;
+const testMode=()=>!!(window.BHAVANA_CONFIG&&window.BHAVANA_CONFIG.testMode);
+const isPremium=()=>window.NATIVE?(!!S.premium||(testMode()&&!!S.testPremium)):!S.settings.simFree;
 function freeToday(){const d=ymd(new Date());S.freeLog=S.freeLog||{};if(!S.freeLog[d])S.freeLog={[d]:[]};return S.freeLog[d]}
 const freeLeft=()=>Math.max(0,FREE_PER_DAY-freeToday().length);
 function allowChant(id){if(isPremium())return true;const t=freeToday();if(t.includes(id))return true;if(t.length<FREE_PER_DAY){t.push(id);save();return true}return false}
@@ -929,6 +933,8 @@ document.addEventListener('click',e=>{const tb=e.target.closest('.tab');if(tb&&t
   case'restorePremium':if(!window.NATIVE){toast('กู้คืนการซื้อได้ในแอปบนมือถือ');break}
    NATIVE.restorePremium().then(ok=>{setPremium(!!ok);if(ok){closeSheet();toast('กู้คืน Premium แล้ว 🪷')}else toast('ไม่พบการซื้อ Premium ในบัญชีนี้')}).catch(()=>toast('กู้คืนไม่สำเร็จ ลองใหม่อีกครั้ง'));break;
   case'paywall':paywall(el.dataset.k);break;
+  case'testNotif':NATIVE.testNotif().then(()=>toast('จะมีแจ้งเตือนขึ้นใน ๕ วินาที ลองกดออกไปหน้าโฮมของเครื่องดู')).catch(e=>toast('ส่งไม่สำเร็จ: '+(e&&e.message||e)));break;
+  case'testPremium':S.testPremium=!S.testPremium;save();closeSheet();renderView();toast(S.testPremium?'เปิด Premium ทดสอบแล้ว 🪷':'ปิด Premium ทดสอบแล้ว');break;
   case'talkAsk':if(!isPremium()){paywall('talk');break}talkIdentity(talkAskSheet);break;
   case'talkSaveId':{const v=$('#talkAlias').value.trim();if(!v){toast('กรุณาตั้งชื่อที่แสดง');break}if(talkCheck(v)){toast(talkCheck(v));break}if(!$('#talkAgree').checked){toast('กรุณายอมรับกติกาก่อน');break}
    S.talkAlias=v.slice(0,30);S.talkAgreed=true;save();closeSheet();const n=talkIdentity.next;talkIdentity.next=null;if(n)n();break}
@@ -949,7 +955,7 @@ document.addEventListener('click',e=>{const tb=e.target.closest('.tab');if(tb&&t
   case'talkFilter':Talk.filter=el.dataset.k;renderView();break;
   case'talkRefresh':Talk.threads={};talkLoad();break;
   case'installTTS':if(window.NATIVE)NATIVE.openInstall();break;
-  case'askNotif':if(window.NATIVE){NATIVE.requestNotif().then(ok=>{toast(ok?'เปิดการแจ้งเตือนแล้ว':'ยังไม่ได้รับอนุญาต เปิดได้ที่การตั้งค่าของเครื่อง');nativeSchedule()});break}try{if(!('Notification'in window))throw 0;Notification.requestPermission().then(p=>{toast(p==='granted'?'เปิดการแจ้งเตือนแล้ว':'เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน');checkNotify()}).catch(()=>toast('เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน'))}catch(x){toast('เบราว์เซอร์ไม่รองรับ จะแจ้งเตือนภายในแอปแทน')}break;
+  case'askNotif':if(window.NATIVE){NATIVE.requestNotif().then(async ok=>{notifPerm=await NATIVE.notifState()||(ok?'granted':'denied');toast(ok?'เปิดการแจ้งเตือนแล้ว 🔔':'ยังไม่ได้รับอนุญาต เปิดได้ที่ ตั้งค่า › แอป › Bhāvanā › การแจ้งเตือน');nativeSchedule();renderView()});break}try{if(!('Notification'in window))throw 0;Notification.requestPermission().then(p=>{toast(p==='granted'?'เปิดการแจ้งเตือนแล้ว':'เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน');checkNotify()}).catch(()=>toast('เบราว์เซอร์ไม่อนุญาต จะแจ้งเตือนภายในแอปแทน'))}catch(x){toast('เบราว์เซอร์ไม่รองรับ จะแจ้งเตือนภายในแอปแทน')}break;
  }});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#overlay').innerHTML){P&&P.open?closePlayer():closeSheet()}});
 function checkNotify(){const tn=todayN();const np=nextPra(tn);if(S.settings.praNotif&&np&&np.day-tn<=1&&!S.dismiss['n'+np.day]){notify('Bhāvanā · '+(np.day===tn?'วันนี้วันพระ':'พรุ่งนี้วันพระ'),np.label+' ชวนสวดมนต์และรักษาศีล');S.dismiss['n'+np.day]=1;save()}}
@@ -963,10 +969,10 @@ buildPra();
 window.addEventListener('hashchange',route);
 if(location.protocol!=='file:')fetch('audio/manifest.json').then(r=>r.ok?r.json():{}).then(j=>{window.AUDIO=j}).catch(()=>{});
 window.onNativeBack=()=>{if($('#overlay').innerHTML){P&&P.open?closePlayer():closeSheet();return true}if(sub){sub=null;renderView();return true}if(curView!=='home'){location.hash='home';return true}return false};
-window.onNativeResume=()=>{renderView();nativeSchedule();NATIVE.premiumStatus().then(setPremium)};
+window.onNativeResume=async()=>{try{notifPerm=await NATIVE.notifState()}catch(e){}renderView();nativeSchedule();NATIVE.premiumStatus().then(setPremium)};
 (async()=>{
   if(window.NATIVE&&!hadLocal){try{const o=await NATIVE.restore();if(o)S={...DEF,...o,settings:{...DEF.settings,...(o.settings||{})}}}catch(e){}}
   route();checkNotify();initCloud();
-  if(window.NATIVE){try{await NATIVE.init()}catch(e){}if(NATIVE.ttsReady===false)ttsOK=false;else if(NATIVE.ttsReady)ttsOK=true;try{nativeSchedule(true)}catch(e){}
+  if(window.NATIVE){try{await NATIVE.init()}catch(e){}if(NATIVE.ttsReady===false)ttsOK=false;else if(NATIVE.ttsReady)ttsOK=true;try{notifPerm=await NATIVE.notifState();if(notifPerm==='granted')nativeSchedule();renderView()}catch(e){}
     NATIVE.premiumStatus().then(setPremium);NATIVE.premiumPrice().then(p=>{if(p)premiumPrice=p})}
 })();
