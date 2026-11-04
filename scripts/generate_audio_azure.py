@@ -31,11 +31,13 @@ SR = 24000
 #   comma_ms pause between phrases of the same line · gap: pause at the end of a line
 #   stretch  Azure can't go below half speed, so the slow style is time-stretched afterwards (pitch kept)
 STYLES = {
-    # Read continuously, Azure bottoms out near 310 ms per syllable, so both styles are paced at 305 ms
-    # and then stretched: normal ≈ 370 ms, slow ≈ 450 ms per syllable. Pauses are given before stretching.
-    'lay':   dict(even=True, syl_ms=305, comma_ms=540, gap=1160, pitch='-4%', echo=False, start_rate=0.7, stretch=0.83),
-    'monk':  dict(even=True, syl_ms=305, comma_ms=480, gap=1000, pitch='-6%', echo=True,  start_rate=0.7, stretch=0.68),
-    'topic': dict(even=False, rate='-8%', pitch='-2%', gap=700, echo=False),
+    # The voice is left as Azure speaks it: no pitch shift, and the normal style is not time-stretched —
+    # both bent the Thai tones and made Niwat sound foreign. Read continuously, Azure's slowest even pace
+    # is ~300 ms per syllable; calm comes from long breaths between phrases and lines instead.
+    # The slow style keeps a light stretch (pitch kept) plus room echo.
+    'lay':   dict(even=True, syl_ms=300, comma_ms=700, gap=1500, pitch='+0%', echo=False, start_rate=0.65),
+    'monk':  dict(even=True, syl_ms=300, comma_ms=650, gap=1350, pitch='+0%', echo=True,  start_rate=0.65, stretch=0.88),
+    'topic': dict(even=False, rate='-8%', pitch='+0%', gap=700, echo=False),
 }
 PASSES = 3   # 1 measuring pass + 2 corrections
 VOWELS = set('ะาิีึืุูัเแโไใำ')
