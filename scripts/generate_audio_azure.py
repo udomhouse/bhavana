@@ -51,7 +51,7 @@ VOWELS = set('ะาิีึืุูัเแโไใำ')
 PRONOUNCE = {
     'วิญญูหีติ': 'วินยูฮีติ',
     'วิญญูหิ': 'วินยูฮิ',
-    'โหมิ': 'โห มิ',          # two syllables โห-มิ, not โหม
+    'โหมิ': 'โห, มิ',         # two syllables โห-มิ; a plain space still came out as โห-หมิ
 }
 # Phrases to chant a little slower than the rest (factor on the syllable length).
 SLOWER = {
