@@ -82,7 +82,7 @@ npm install
 
 ## ขั้นที่ 4: ส่งขึ้น App Store และ Google Play
 
-**ก่อนส่ง: เปลี่ยนรหัสแอปเป็นของคุณเอง** รหัสตอนนี้ `com.bhavana.app` เป็นรหัสชั่วคราว ต้องไม่ซ้ำกับแอปอื่นในโลก เช่น `com.ชื่อคุณ.bhavana` ต้องแก้ ๓ ที่:
+**รหัสแอป:** `com.udomhouse.bhavana` (ตั้งไว้แล้วทั้ง ๓ ที่ ถ้าจะเปลี่ยนต้องแก้ให้ตรงกัน):
 - `capacitor.config.json` → `appId`
 - `android/app/build.gradle` → `applicationId`
 - Xcode → target App → General → **Bundle Identifier**

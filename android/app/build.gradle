@@ -4,7 +4,7 @@ android {
     namespace = "com.bhavana.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.bhavana.app"
+        applicationId "com.udomhouse.bhavana"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
