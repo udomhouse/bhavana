@@ -281,7 +281,7 @@ def main():
     manifest = json.load(open(man_path, encoding='utf8')) if os.path.exists(man_path) else {}
     only = set(filter(None, args.only.split(',')))
     data = load_texts()
-    jobs = [(c['id'], c['lines'], ['lay', 'monk']) for c in data['chants']] + \
+    jobs = [(c['id'], c['lines'], ['lay']) for c in data['chants']]   # the slow 'monk' style was removed from the app + \
            [(t['id'], t['lines'], ['topic']) for t in data['topics']]
     failed = []
     for key_id, lines, styles in jobs:

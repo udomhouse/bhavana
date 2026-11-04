@@ -236,6 +236,8 @@ const IC={
  list:'<path d="M4 6h11M4 12h11M4 18h7"/><circle cx="18" cy="17" r="2.5"/><path d="M20.5 17V6l-3 1"/>',
  heart:'<path d="M12 20s-7-4.4-9.2-9C1.3 7.8 3.4 4.5 6.8 4.5c2 0 3.4 1.1 5.2 3 1.8-1.9 3.2-3 5.2-3 3.4 0 5.5 3.3 4 6.5C19 15.6 12 20 12 20z"/>',
  heartf:'<path fill="currentColor" d="M12 20s-7-4.4-9.2-9C1.3 7.8 3.4 4.5 6.8 4.5c2 0 3.4 1.1 5.2 3 1.8-1.9 3.2-3 5.2-3 3.4 0 5.5 3.3 4 6.5C19 15.6 12 20 12 20z"/>',
+ vol:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
+ mute:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9.5l5 5M22 9.5l-5 5"/>',
  chat:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M8.5 8.5h7M8.5 12h4.5"/>',
  radio:'<circle cx="12" cy="12" r="2"/><path d="M8.5 15.5a5 5 0 0 1 0-7M15.5 8.5a5 5 0 0 1 0 7M5.6 18.4a9 9 0 0 1 0-12.8M18.4 5.6a9 9 0 0 1 0 12.8"/>',
  med:'<circle cx="12" cy="5" r="2.2"/><path d="M12 8v5M6 20c1.5-3 3.5-4.5 6-4.5s4.5 1.5 6 4.5M4 14c2.5 1 5 .5 8-1 3 1.5 5.5 2 8 1"/>',
@@ -286,7 +288,7 @@ async function initCloud(){
     dbDoc=ref; if(!snap.exists)save();
   }catch(e){}
 }
-if(S.settings.voice==='music')S.settings.voice='lay'; // instrumental mode was removed
+if(S.settings.voice!=='lay')S.settings.voice='lay'; // instrumental and slow-temple modes were removed
 if(!S.seeded&&!S.playlists.length){S.playlists.push({id:'p'+Date.now(),name:'สวดก่อนนอน (ตัวอย่าง)',items:[{id:'namo'},{id:'itipiso',reps:3},{id:'karaniya'},{id:'metta_self'},{id:'metta_all'}]});S.seeded=true}
 
 /* ============ ordering & builders ============ */
@@ -432,7 +434,8 @@ function step(){
   {const it=P.items[P.ci];if(P.li===0&&it.id&&!allowChant(it.id)){P.playing=false;stopDrone();stopMusic();if(window.NATIVE&&!MT.run)NATIVE.allowSleep();updatePlayerUI();paywall('limit');return}}
   const ln=P.lines[P.li];hilite();
   const mode=P.story?'lay':S.settings.voice;const sp=S.settings.speed;
-  const rec=mode!=='music'&&!P.recFail&&recFor(P.items[P.ci]);
+  const muted=!!S.settings.muted;
+  const rec=!muted&&mode!=='music'&&!P.recFail&&recFor(P.items[P.ci]);
   if(rec)return playRecorded(rec,P.li);
   const adv=()=>{if(!P||!P.playing)return;clearTimers();P.li++;step()};
   if(ln.note){TM.n=setTimeout(adv,1100/sp);return}
@@ -441,7 +444,7 @@ function step(){
   let wi=0;
   const walk=()=>{setWord(wi);if(wi<words.length-1){TM.w=setTimeout(()=>{wi++;walk()},durs[wi])}};
   const paced=()=>{clearTimers();wi=0;walk();TM.a=setTimeout(adv,total+900/sp)};
-  if(window.NATIVE&&NATIVE.ttsReady!==false&&mode!=='music'){ // phone's own Thai voice (iOS Kanya / Android Google TTS)
+  if(!muted&&window.NATIVE&&NATIVE.ttsReady!==false&&mode!=='music'){ // phone's own Thai voice (iOS Kanya / Android Google TTS)
     const tok=speakTok;
     NATIVE.onRange=st=>{if(tok!==speakTok)return;const i=words.findIndex(w=>st<w.b);if(i>=0){clearTimeout(TM.w);wi=i;setWord(i)}};
     walk();
@@ -450,7 +453,7 @@ function step(){
      .catch(()=>{if(tok!==speakTok)return;NATIVE.ttsReady=false;ttsOK=false;updateWarn();if(P&&P.playing)paced()});
     return;
   }
-  const useTTS=mode!=='music'&&synth&&ttsOK!==false;
+  const useTTS=!muted&&mode!=='music'&&synth&&ttsOK!==false;
   if(!useTTS){paced();return}
   const text=ln.s.replace(/[,.;]/g,' ');
   const u=new SpeechSynthesisUtterance(text);u.lang='th-TH';if(thVoice)u.voice=thVoice;
@@ -465,7 +468,7 @@ function step(){
   TM.s=setTimeout(()=>{if(!started)noVoice()},2500);
   TM.g=setTimeout(()=>{if(!ended){ended=true;adv()}},total*3+6000);
 }
-function updateWarn(){const w=$('#vwarn');if(!w||!P)return;const needVoice=(P.story||S.settings.voice!=='music')&&!recFor(P.items[P.ci]);
+function updateWarn(){const w=$('#vwarn');if(!w||!P)return;const needVoice=!S.settings.muted&&!recFor(P.items[P.ci]);
   if(needVoice&&ttsOK===false){w.hidden=false;w.innerHTML=(window.NATIVE&&NATIVE.platform==='android'?'<button class="btn sm" data-act="installTTS" style="margin-bottom:6px">ติดตั้งเสียงภาษาไทย</button><br>':'')+'อุปกรณ์นี้ยังไม่มีเสียงอ่านภาษาไทย แอปจะไล่ข้อความทีละคำให้สวดตามช้า ๆ · เปิดเสียงไทยได้ที่ การตั้งค่าเครื่อง › การช่วยการเข้าถึง › เนื้อหาที่พูด (iPhone) หรือ เอาต์พุตการอ่านออกเสียง (Android)'}else w.hidden=true}
 function nextChant(auto){if(!P)return;hush();
   if(auto&&P.items[P.ci].id){const d=ymd(new Date());S.chantDays=S.chantDays||{};S.chantDays[d]=(S.chantDays[d]||0)+1;save()}
@@ -483,18 +486,17 @@ function openPlayer(){if(!P)return;P.open=true;const o=$('#overlay');o.innerHTML
  <div class="reader" id="reader"></div>
  <div class="controls">
   <div class="prog" id="prog"><i></i></div>
-  <div class="row"><button class="cbtn" data-act="prev" aria-label="บทก่อนหน้า">${ic('prev')}</button><button class="cbtn play" id="pPlay" data-act="toggle" aria-label="เล่น/หยุด"></button><button class="cbtn" data-act="next" aria-label="บทถัดไป">${ic('next')}</button></div>
-  <div class="row2">
-   <div class="seg" role="group" aria-label="เสียง" id="voiceSeg">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
-   <label class="ctl" for="spd">ความเร็ว <input id="spd" type="range" min="0.5" max="1.6" step="0.1" value="${S.settings.speed}"><b id="spdv">${S.settings.speed.toFixed(1)}×</b></label>
-   <label class="ctl" for="fsz">ตัวอักษร <input id="fsz" type="range" min="16" max="40" step="1" value="${S.settings.fs}"></label>
+  <div class="bar">
+   <button class="cbtn sm" id="pMute" data-act="mute" aria-label="เปิด/ปิดเสียงสวด"></button>
+   <button class="cbtn" data-act="prev" aria-label="บทก่อนหน้า">${ic('prev')}</button>
+   <button class="cbtn play" id="pPlay" data-act="toggle" aria-label="เล่น/หยุด"></button>
+   <button class="cbtn" data-act="next" aria-label="บทถัดไป">${ic('next')}</button>
+   <button class="pchip" id="pSpeed" data-act="speed" aria-label="ความเร็ว">${S.settings.speed}×</button>
+   <span class="pfs"><button class="pchip" data-act="fs" data-d="-2" aria-label="ตัวอักษรเล็กลง">A−</button><button class="pchip" data-act="fs" data-d="2" aria-label="ตัวอักษรใหญ่ขึ้น">A+</button></span>
   </div>
   <div class="voicewarn" id="vwarn" hidden></div>
  </div></div>`;
  renderReader();updatePlayerUI();
- $('#spd').oninput=e=>{S.settings.speed=+e.target.value;if(curAudio)curAudio.playbackRate=S.settings.speed;$('#spdv').textContent=S.settings.speed.toFixed(1)+'×';save()};
- $('#spd').onchange=()=>{if(P&&P.playing&&!curAudio){if(synth)synth.cancel();clearTimeout(stopAll.t);step()}};
- $('#fsz').oninput=e=>{S.settings.fs=+e.target.value;$('.player').style.setProperty('--fs',S.settings.fs+'px');save()};
 }
 function closePlayer(){if(P)P.open=false;$('#overlay').innerHTML='';renderMini()}
 function renderReader(){const r=$('#reader');if(!r||!P)return;const it=P.items[P.ci];
@@ -506,9 +508,9 @@ function updatePlayerUI(){if(!P)return;const it=P.items[P.ci];
   const t=$('#pTitle');if(t){t.textContent=titleOf(it);$('#pSub').textContent=`${P.title} · บทที่ ${P.ci+1}/${P.radio?'∞':P.items.length}`;
    $('#pPlay').innerHTML=ic(P.playing?'pause':'play');
    const fav=it.id&&S.favs.includes(it.id)||it.topic&&S.favTopics.includes(it.topic);$('#pFav').innerHTML=ic(fav?'heartf':'heart');$('#pFav').style.color=fav?'var(--gold)':'';
-   document.querySelectorAll('#voiceSeg button').forEach(b=>b.setAttribute('aria-pressed',S.settings.voice===b.dataset.v));
+   const mb=$('#pMute');mb.innerHTML=ic(S.settings.muted?'mute':'vol');mb.classList.toggle('off',!!S.settings.muted);mb.setAttribute('aria-pressed',String(!S.settings.muted));
    updateWarn();
-   $('#voiceSeg').hidden=P.story}
+}
   renderMini();if(curView==='radio')renderView()}
 function renderMini(){const m=$('#mini');if(!P||P.open){m.hidden=true;return}m.hidden=false;const it=P.items[P.ci];
   m.className='mini';m.innerHTML=`<div class="thumb"></div><button class="main" data-act="openPlayer"><b>${esc(titleOf(it))}</b><span>${esc(P.title)}</span></button><button class="pb" data-act="toggle" aria-label="เล่น/หยุด">${ic(P.playing?'pause':'play')}</button><button class="pb" data-act="next" aria-label="ถัดไป">${ic('next')}</button>`}
@@ -640,7 +642,6 @@ function vRadio(){const on=P&&P.radio;const it=on?P.items[P.ci]:null;
   <div class="radio"><div class="disc ${on&&P.playing?'spin':''}"></div>
    <div><div class="eyebrow">${on?'กำลังเล่น · สถานี'+esc(STATIONS.find(s=>s[0]===P.radio)[1]):'พร้อมออกอากาศ'}</div><h2 class="sec" style="margin-top:4px">${on?esc(titleOf(it)):'กดเล่นเพื่อเริ่มสถานี'}</h2></div>
    <div class="hstack" style="justify-content:center"><button class="btn" data-act="radioGo">${ic(on&&P.playing?'pause':'play')} ${on&&P.playing?'หยุด':'เล่นสถานี'}</button>${on?`<button class="btn ghost" data-act="next">${ic('shuffle')} สุ่มบทใหม่</button>`:''}</div>
-   <div class="seg" role="group" aria-label="เสียง">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${S.settings.voice===k}">${l}</button>`).join('')}</div>
   </div>`}
 
 /* meditation */
@@ -721,7 +722,6 @@ function settingsSheet(){const s=S.settings;sheet(`<h3>ตั้งค่า</h3
  <div class="card" style="margin-top:10px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b>${isPremium()?'Premium 🪷':'เวอร์ชันฟรี'}</b><div class="muted small">${isPremium()?'ปลดล็อกทุกฟีเจอร์แล้ว ขอบคุณที่สนับสนุน':'สวดฟรีวันละ '+FREE_PER_DAY+' บท · วันนี้เหลือ '+freeLeft()+' บท'}</div></div>${isPremium()&&window.NATIVE?'':`<div class="hstack">${isPremium()?'':'<button class="btn sm" data-act="paywall" data-k="">อัปเกรด</button>'}<button class="btn sm ghost" data-act="restorePremium">กู้คืนการซื้อ</button></div>`}</div>
  ${window.NATIVE?'':toggleRow('simFree','จำลองผู้ใช้ฟรี (เฉพาะเว็บ)','ลองดูประสบการณ์ของผู้ใช้ที่ยังไม่ซื้อ Premium')}
  ${window.NATIVE&&testMode()?`<div class="card" style="margin-top:10px;border:1px dashed var(--peach)"><b>🧪 โหมดทดสอบ</b><div class="muted small" style="margin:4px 0 10px">เปิด Premium โดยไม่ต้องซื้อ ใช้ทดสอบเท่านั้น (ปิดก่อนส่งขึ้น Store)</div><button class="btn sm" data-act="testPremium">${S.testPremium?'ปิด Premium ทดสอบ':'เปิด Premium ทดสอบ'}</button></div>`:''}
- <div class="field"><label>เสียงสวดเริ่มต้น</label><div class="seg">${[['lay','สวดปกติ'],['monk','สวดช้า ก้องแบบในโบสถ์']].map(([k,l])=>`<button data-act="voice" data-v="${k}" aria-pressed="${s.voice===k}">${l}</button>`).join('')}</div></div>
  <div class="field"><label for="setSpd">ความเร็วเสียงสวด <b id="setSpdV">${s.speed.toFixed(1)}×</b></label><input type="range" id="setSpd" min="0.5" max="1.6" step="0.1" value="${s.speed}"></div>
  <div class="field"><label for="setFs">ขนาดตัวอักษรบทสวด <b id="setFsV">${s.fs}px</b></label><input type="range" id="setFs" min="16" max="40" step="1" value="${s.fs}"><div id="fsPrev" style="font-family:var(--f-chant);font-size:${s.fs}px;line-height:1.6">อิติปิ โส ภะคะวา อะระหัง</div></div>
  <div class="field"><label>การแจ้งเตือน</label>${toggleRow('praNotif','แจ้งเตือนวันพระ','แสดงล่วงหน้า ๑ วัน และในวันพระ')}${toggleRow('streakNotif','เตือนรักษาสตรีค','เตือนหลัง ๑๘.๐๐ น.')}</div>
@@ -936,6 +936,9 @@ document.addEventListener('click',e=>{const tb=e.target.closest('.tab');if(tb&&t
   case'restorePremium':if(!window.NATIVE){toast('กู้คืนการซื้อได้ในแอปบนมือถือ');break}
    NATIVE.restorePremium().then(ok=>{setPremium(!!ok);if(ok){closeSheet();toast('กู้คืน Premium แล้ว 🪷')}else toast('ไม่พบการซื้อ Premium ในบัญชีนี้')}).catch(()=>toast('กู้คืนไม่สำเร็จ ลองใหม่อีกครั้ง'));break;
   case'paywall':paywall(el.dataset.k);break;
+  case'mute':S.settings.muted=!S.settings.muted;save();if(P&&P.playing){const li=P.li;hush();P.li=li;step()}updatePlayerUI();toast(S.settings.muted?'ปิดเสียงสวด ไฮไลต์ยังเลื่อนตามจังหวะ':'เปิดเสียงสวด');break;
+  case'speed':{const L=[0.8,0.9,1,1.1,1.25];const i=L.findIndex(v=>Math.abs(v-S.settings.speed)<0.01);S.settings.speed=L[(i+1)%L.length];save();el.textContent=S.settings.speed+'×';if(curAudio)curAudio.playbackRate=S.settings.speed;else if(P&&P.playing)step();break}
+  case'fs':S.settings.fs=Math.max(16,Math.min(40,S.settings.fs+(+el.dataset.d)));save();$('.player').style.setProperty('--fs',S.settings.fs+'px');break;
   case'testNotif':NATIVE.testNotif().then(()=>toast('จะมีแจ้งเตือนขึ้นใน ๕ วินาที ลองกดออกไปหน้าโฮมของเครื่องดู')).catch(e=>toast('ส่งไม่สำเร็จ: '+(e&&e.message||e)));break;
   case'testPremium':S.testPremium=!S.testPremium;save();closeSheet();renderView();toast(S.testPremium?'เปิด Premium ทดสอบแล้ว 🪷':'ปิด Premium ทดสอบแล้ว');break;
   case'talkAsk':if(!isPremium()){paywall('talk');break}talkIdentity(talkAskSheet);break;

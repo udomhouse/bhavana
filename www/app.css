@@ -181,7 +181,14 @@ input[type=range]{width:100%;accent-color:var(--sky)}
 .ln.act .w.done{color:var(--fg)}
 .ln.act .w.on{color:var(--fg);background-size:100% 40%;font-weight:600}
 .meaning{margin-top:14px;padding:14px;border-radius:16px;background:var(--bg2);font-family:var(--f-chant);font-size:16px;line-height:1.65;color:var(--fg2)}
-.controls{border-top:1px solid var(--line);padding:12px max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:10px;background:var(--bg2)}
+.controls{border-top:1px solid var(--line);padding:8px max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:6px;background:var(--bg2)}
+.controls .bar{display:flex;align-items:center;justify-content:space-between;gap:4px;max-width:640px;margin:0 auto;width:100%}
+.controls .bar .cbtn{width:40px;height:40px}.controls .bar .cbtn svg{width:22px;height:22px}
+.controls .bar .cbtn.play{width:52px;height:52px}.controls .bar .cbtn.play svg{width:24px;height:24px}
+.controls .bar .cbtn.sm svg{width:21px;height:21px}.controls .bar .cbtn.off{color:var(--fg2);opacity:.75}
+.pchip{min-width:40px;height:32px;padding:0 8px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.pfs{display:flex;gap:4px}
+
 .controls .row{display:flex;align-items:center;justify-content:center;gap:22px}
 .controls .row2{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:640px;margin:0 auto;width:100%}
 .cbtn{width:46px;height:46px;display:grid;place-items:center;border-radius:50%}
