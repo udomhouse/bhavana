@@ -3,11 +3,28 @@
   "appName": "Bhāvanā",
   "webDir": "www",
   "backgroundColor": "#14275A",
-  "ios": { "contentInset": "never", "scheme": "Bhavana" },
-  "android": { "backgroundColor": "#14275A" },
+  "ios": {
+    "contentInset": "never",
+    "scheme": "Bhavana"
+  },
+  "android": {
+    "backgroundColor": "#14275A"
+  },
   "plugins": {
-    "SplashScreen": { "launchAutoHide": false, "backgroundColor": "#14275A", "showSpinner": false, "androidScaleType": "CENTER_CROP" },
-    "LocalNotifications": { "smallIcon": "ic_stat_bhavana", "iconColor": "#14275A" },
-    "StatusBar": { "overlaysWebView": true }
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 1500,
+      "launchFadeOutDuration": 300,
+      "backgroundColor": "#14275A",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_bhavana",
+      "iconColor": "#14275A"
+    },
+    "StatusBar": {
+      "overlaysWebView": true
+    }
   }
 }

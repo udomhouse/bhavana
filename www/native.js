@@ -7,6 +7,8 @@
   const TTS = plug('TextToSpeech'), LN = plug('LocalNotifications'), Pref = plug('Preferences'),
     KA = plug('KeepAwake'), IAP = plug('NativePurchases'), SB = plug('StatusBar'), App = plug('App'), Hap = plug('Haptics'), Splash = plug('SplashScreen');
   const quiet = (p) => (p && p.catch ? p.catch(() => {}) : p);
+  // Never let one slow plugin hold the app: give up on a call after `ms`
+  const within = (p, ms = 1500, fallback = null) => Promise.race([Promise.resolve(p).catch(() => fallback), new Promise((r) => setTimeout(() => r(fallback), ms))]);
 
   const N = {
     platform: Cap.getPlatform(),   // 'ios' | 'android'
@@ -14,15 +16,16 @@
     onRange: null,                 // set by app.js: called with the char index of the word being spoken
 
     async init() {
-      try { N.ttsReady = !!(await TTS.isLanguageSupported({ lang: 'th-TH' })).supported; } catch (e) { N.ttsReady = null; }
-      try { await TTS.addListener('onRangeStart', (i) => N.onRange && N.onRange(i.start)); } catch (e) {}
-      try { await App.addListener('backButton', () => { if (!(window.onNativeBack && window.onNativeBack())) App.exitApp(); }); } catch (e) {}
-      try { await App.addListener('appStateChange', (s) => { if (s.isActive && window.onNativeResume) window.onNativeResume(); }); } catch (e) {}
+      quiet(Splash.hide({ fadeOutDuration: 250 }));   // first, so the logo never blocks the app
+      const r = await within(TTS.isLanguageSupported({ lang: 'th-TH' }));
+      N.ttsReady = r ? !!r.supported : null;
+      within(TTS.addListener('onRangeStart', (i) => N.onRange && N.onRange(i.start)));
+      within(App.addListener('backButton', () => { if (!(window.onNativeBack && window.onNativeBack())) App.exitApp(); }));
+      within(App.addListener('appStateChange', (s) => { if (s.isActive && window.onNativeResume) window.onNativeResume(); }));
       quiet(SB.setOverlaysWebView({ overlay: true }));
       const mq = matchMedia('(prefers-color-scheme: dark)');
       const style = () => quiet(SB.setStyle({ style: mq.matches ? 'DARK' : 'LIGHT' }));
       style(); if (mq.addEventListener) mq.addEventListener('change', style);
-      setTimeout(() => quiet(Splash.hide({ fadeOutDuration: 250 })), 250);
     },
 
     /* speech */
@@ -38,7 +41,7 @@
     haptic() { quiet(Hap.impact({ style: 'MEDIUM' })); },
 
     /* durable storage (WebView localStorage can be cleared by the OS) */
-    async restore() { try { const { value } = await Pref.get({ key: 'state' }); return value ? JSON.parse(value) : null; } catch (e) { return null; } },
+    async restore() { try { const r = await within(Pref.get({ key: 'state' })); return r && r.value ? JSON.parse(r.value) : null; } catch (e) { return null; } },
     persist(state) { quiet(Pref.set({ key: 'state', value: JSON.stringify(state) })); },
 
     /* Premium: one-time "Non-Consumable" in-app purchase, same product id in App Store Connect and Google Play */

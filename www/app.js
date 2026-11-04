@@ -967,6 +967,6 @@ window.onNativeResume=()=>{renderView();nativeSchedule();NATIVE.premiumStatus().
 (async()=>{
   if(window.NATIVE&&!hadLocal){try{const o=await NATIVE.restore();if(o)S={...DEF,...o,settings:{...DEF.settings,...(o.settings||{})}}}catch(e){}}
   route();checkNotify();initCloud();
-  if(window.NATIVE){await NATIVE.init();if(NATIVE.ttsReady===false)ttsOK=false;else if(NATIVE.ttsReady)ttsOK=true;nativeSchedule(true);
+  if(window.NATIVE){try{await NATIVE.init()}catch(e){}if(NATIVE.ttsReady===false)ttsOK=false;else if(NATIVE.ttsReady)ttsOK=true;try{nativeSchedule(true)}catch(e){}
     NATIVE.premiumStatus().then(setPremium);NATIVE.premiumPrice().then(p=>{if(p)premiumPrice=p})}
 })();
