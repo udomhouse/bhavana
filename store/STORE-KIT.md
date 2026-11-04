@@ -132,14 +132,14 @@ before posting; posts are filtered for profanity and links; every post has a ⋯
 it (3 reports hide it automatically) or to hide all posts from that user; we moderate and can
 ban accounts. Users can delete their own posts, and delete all their posts and their anonymous
 account in Settings › "ลบโพสต์และบัญชีห้องสนทนาของฉัน" (Delete my discussion posts and account).
-Contact: (support email)
+Contact: admin@udom-bhavana.com
 
 Notifications are local (holy-day and streak reminders), requested from a button in the app.
 ```
 
 ## 6. ก่อนกด Build ส่ง Store ✅
 - [ ] `www/config.js` แก้ `testMode: true` เป็น `testMode: false` (ปิดปุ่มเปิด Premium ทดสอบ)
-- [ ] ใส่อีเมลติดต่อจริงใน Privacy Policy, Review Notes และ Support URL
+- [x] อีเมลติดต่อ: admin@udom-bhavana.com (ใส่ใน Privacy Policy, Review Notes และแอปแล้ว)
 - [ ] สร้างสินค้า `premium_lifetime` ในทั้งสองร้านแล้ว
 - [ ] เวอร์ชันแอป: ครั้งแรกใช้ 1.0.0 (build 1) ครั้งต่อไปต้องเพิ่มเลข build ทุกครั้ง
 - [ ] ได้รับอนุญาตใช้ฟอนต์ ChulaNarak จาก TEPC (หรือเปลี่ยนเป็น Krub ก่อน)
