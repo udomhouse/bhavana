@@ -44,8 +44,27 @@ STYLES = {
     'monk':  dict(even=True, syl_ms=280, comma_ms=650, gap=880,  echo=True,  start_rate=1.0, stretch=0.88),
     'topic': dict(even=False, rate=1.0, gap=900, echo=False),
 }
-PASSES = 4   # the voice reacts unevenly to speed changes: try gently, keep each phrase's closest take
+PASSES = 5   # the voice reacts unevenly to speed changes: try gently, keep each phrase's closest take
 VOWELS = set('ะาิีึืุูัเแโไใำ')
+
+# How a word should sound when the written form misleads the voice (display text is unchanged).
+PRONOUNCE = {
+    'วิญญูหีติ': 'วินยูฮีติ',
+    'วิญญูหิ': 'วินยูฮิ',
+}
+# Phrases to chant a little slower than the rest (factor on the syllable length).
+SLOWER = {
+    'อุชุปะฏิปันโน': 1.2,
+    'โย วาจะโน ทินะทิเน': 1.2,
+    'พุทธะมะอะอุ': 1.2,
+    'ตะติยัมปิ ธัมมัง': 1.2,
+}
+TONE_MARKS = set('่้๊๋์')
+
+def is_thai_prose(text):
+    """Thai sentences (translations inside a chant) use tone marks; Pali written in Thai almost never does.
+    Those lines are read at the voice's natural pace instead of the even chanting pulse."""
+    return sum(c in TONE_MARKS for c in text) >= 2
 
 def syllables(tok):
     """Pali written in Thai marks every syllable with a vowel sign (ภะ-คะ-วะ-โต), so counting them works."""
@@ -58,6 +77,8 @@ def load_texts():
 def spoken_text(t):
     t = t.replace('ฯ', '').replace('ฺ', '').replace('-', ' ')   # phinthu confuses the voice; ยะ-ธา-พุท is read per syllable
     t = re.sub(r'[;:()"“”]', ' ', t)
+    for a, b in PRONOUNCE.items():
+        t = t.replace(a, b)
     return re.sub(r'\s+', ' ', t).strip()
 
 def units_of(lines, even):
@@ -74,10 +95,14 @@ def units_of(lines, even):
                 cur.append(wi)
                 if raw.endswith(',') or wi == len(toks) - 1:
                     words = [spoken_text(toks[i]).strip(',.') for i in cur]
-                    units.append((n, p, cur, [syllables(w) for w in words], ' '.join(w for w in words if w)))
+                    text = ' '.join(w for w in words if w)
+                    prose = is_thai_prose(text)
+                    weights = [max(1, len(w) // 3) for w in words] if prose else [syllables(w) for w in words]
+                    factor = max([f for k, f in SLOWER.items() if k in text] or [1.0])
+                    units.append((n, p, cur, weights, text, prose, factor))
                     p, cur = p + 1, []
         else:
-            units.append((n, 0, list(range(len(toks))), [syllables(spoken_text(t)) for t in toks], spoken_text(line)))
+            units.append((n, 0, list(range(len(toks))), [syllables(spoken_text(t)) for t in toks], spoken_text(line), True, 1.0))
         n += 1
     return units, n
 
@@ -154,6 +179,13 @@ def tighten(seg):
     out.append(seg[last:])
     return np.concatenate(out)
 
+def stretch_seg(seg, tempo):
+    """Slow one phrase down (tempo < 1), pitch kept."""
+    out = subprocess.run(['ffmpeg', '-loglevel', 'error', '-f', 'f32le', '-ar', str(SR), '-ac', '1', '-i', '-',
+                          '-af', f'atempo={tempo:.3f}', '-f', 'f32le', '-ac', '1', '-ar', str(SR), '-'],
+                         input=seg.astype(np.float32).tobytes(), capture_output=True, check=True).stdout
+    return np.frombuffer(out, dtype=np.float32).copy()
+
 def pad(seg, pre=0.03, post=0.06):
     return np.concatenate([np.zeros(int(pre * SR), np.float32), seg, np.zeros(int(post * SR), np.float32)])
 
@@ -180,9 +212,11 @@ def speak(cfg, text, rate):
 def render_units(cfg, units, st, rates):
     """Synthesize every unit on its own and return one audio array per unit."""
     def one(i):
-        r = round(rates.get(i, st.get('start_rate', st.get('rate', 1.0))), 2)
-        x = speak(cfg, units[i][4], r)
-        return tighten(x) if st['even'] else x
+        u = units[i]
+        base = st.get('start_rate', st.get('rate', 1.0))
+        r = round(base if u[5] else rates.get(i, base / u[6]), 2)
+        x = speak(cfg, u[4], r)
+        return tighten(x) if st['even'] and not u[5] else x
     with ThreadPoolExecutor(WORKERS) as ex:
         return list(ex.map(one, range(len(units))))
 
@@ -204,7 +238,7 @@ def assemble(path, units, segs, nlines, st):
     out, t = [sil(300)], 0.3
     cues, anchors = [None] * nlines, [[] for _ in range(nlines)]
     for i, (u, seg) in enumerate(zip(units, segs)):
-        n, p, wis, syl, _ = u
+        n, p, wis, syl = u[:4]
         seg = pad(seg).copy()
         if len(seg) > 2 * fade:
             seg[:fade] *= np.linspace(0, 1, fade, dtype=np.float32)
@@ -272,20 +306,28 @@ def main():
                     segs = render_units(cfg, units, st, rates)
                     if not st['even']:
                         break
-                    want = [sum(u[3]) * st['syl_ms'] / 1000 for u in units]
+                    want = [sum(u[3]) * st['syl_ms'] / 1000 * u[6] for u in units]
                     for i, (sg, w) in enumerate(zip(segs, want)):
-                        err = abs(len(sg) / SR / w - 1)
+                        err = 0 if units[i][5] else abs(len(sg) / SR / w - 1)   # Thai prose: natural pace, keep as is
                         if i not in best or err < best[i][0]:
                             best[i] = (err, sg)
-                    per = [(len(best[i][1]) / SR) / sum(u[3]) for i, u in enumerate(units)]
+                    chant = [i for i, u in enumerate(units) if not u[5]]
+                    per = [(len(best[i][1]) / SR) / sum(units[i][3]) / units[i][6] for i in chant] or [1]
                     mean = sum(per) / len(per)
                     cv = (sum((v - mean) ** 2 for v in per) / len(per)) ** 0.5 / mean * 100
                     note += f' pass{p + 1}: {mean * 1000:.0f}ms±{cv:.0f}%'
                     for i, (sg, w) in enumerate(zip(segs, want)):   # damped correction
-                        cur = rates.get(i, st['start_rate'])
-                        rates[i] = min(1.6, max(0.6, cur * (len(sg) / SR / w) ** 0.7))
+                        if units[i][5]:
+                            continue
+                        cur = rates.get(i, st['start_rate'] / units[i][6])
+                        floor = 0.4 if units[i][6] > 1 else 0.6   # phrases asked to be slower may go further
+                        rates[i] = min(1.6, max(floor, cur * (len(sg) / SR / w) ** 0.7))
                 if st['even']:
                     segs = [best[i][1] for i in range(len(units))]
+                    for i, u in enumerate(units):   # a phrase asked to be slower that the voice still rushes: stretch only it
+                        w = sum(u[3]) * st['syl_ms'] / 1000 * u[6]
+                        if u[6] > 1 and not u[5] and len(segs[i]) / SR < w * 0.93:
+                            segs[i] = stretch_seg(segs[i], max(0.75, len(segs[i]) / SR / w))
                 if sname == 'lay':
                     lay_segs = segs
                 cues, anchors = assemble(os.path.join(OUT, fname), units, segs, nlines, st)
