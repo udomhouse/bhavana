@@ -60,6 +60,26 @@
       if (t && t.productIdentifier === N.PRODUCT) return true;
       return !!(await N.premiumStatus());
     },
+    /* 7-day free trial: a FREE non-consumable "trial_7day" (Apple guideline 3.1.1 asks trials of one-time
+       purchases to be a free in-app item named "XX-day Trial"). Its purchase date starts the trial, so it
+       follows the Apple ID / Google account and survives reinstalling the app. */
+    TRIAL: 'trial_7day',
+    async trialStart() {      // ms timestamp the trial began, or null (not started / store unreachable)
+      try {
+        const { purchases } = await IAP.getPurchases({ productType: 'inapp' });
+        const t = purchases.find((p) => p.productIdentifier === N.TRIAL);
+        if (!t) return 0;
+        const d = Date.parse(t.originalPurchaseDate || t.purchaseDate);
+        return isNaN(d) ? Date.now() : d;
+      } catch (e) { return null; }
+    },
+    async startTrial() {      // returns the start timestamp; falls back to "now" when the store has no trial item
+      try { await IAP.getProduct({ productIdentifier: N.TRIAL, productType: 'inapp' }); }
+      catch (e) { return Date.now(); }
+      const t = await IAP.purchaseProduct({ productIdentifier: N.TRIAL, productType: 'inapp', quantity: 1 });
+      const d = t && Date.parse(t.originalPurchaseDate || t.purchaseDate);
+      return d && !isNaN(d) ? d : Date.now();
+    },
     async restorePremium() { try { await IAP.restorePurchases(); } catch (e) {} return !!(await N.premiumStatus()); },
 
     /* notifications */
