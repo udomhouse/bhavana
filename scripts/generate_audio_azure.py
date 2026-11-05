@@ -69,6 +69,8 @@ PRONOUNCE = {
     'มารดา': 'มานดา',
     'โสตถ': 'โสดถ',            # โสตถี / โสตถิ
     'วินาศสันติ': 'วินาดสันติ',
+    'พรหมา': 'พรัมมา',
+    'พรหมะ': 'พรัมมะ',
 }
 # Phrases to chant a little slower than the rest (factor on the syllable length).
 SLOWER = {
