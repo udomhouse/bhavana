@@ -44,7 +44,6 @@ STYLES = {
     'monk':  dict(even=True, syl_ms=280, comma_ms=650, gap=880,  echo=True,  start_rate=1.0, stretch=0.88),
     'topic': dict(even=False, rate=1.0, gap=900, echo=False),
 }
-PASSES = 5   # the voice reacts unevenly to speed changes: try gently, keep each phrase's closest take
 VOWELS = set('ะาิีึืุูัเแโไใำ')
 
 # How a word should sound when the written form misleads the voice (display text is unchanged).
@@ -179,7 +178,15 @@ def tighten(seg):
             continue
         out.append(seg[last:a + keep // 2]); last = b - keep // 2
     out.append(seg[last:])
-    return np.concatenate(out)
+    xf = int(0.012 * SR)   # soft splice: tiny crossfade so cut breaths never click or ring
+    y = out[0]
+    for part in out[1:]:
+        if len(y) > xf and len(part) > xf:
+            ramp = np.linspace(0, 1, xf, dtype=np.float32)
+            y = np.concatenate([y[:-xf], y[-xf:] * (1 - ramp) + part[:xf] * ramp, part[xf:]])
+        else:
+            y = np.concatenate([y, part])
+    return y
 
 def stretch_seg(seg, tempo):
     """Slow one phrase down (tempo < 1), pitch kept."""
@@ -230,7 +237,7 @@ def encode(y, path, st):
         filters.append('aecho=0.8:0.55:70|140:0.22|0.12')
     filters.append('loudnorm=I=-18:TP=-2:LRA=7')
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'f32le', '-ar', str(SR), '-ac', '1', '-i', '-',
-                    '-af', ','.join(filters), '-ac', '1', '-c:a', 'libmp3lame', '-b:a', '40k', path],
+                    '-af', ','.join(filters), '-ac', '1', '-c:a', 'libmp3lame', '-b:a', '64k', path],
                    input=y.astype(np.float32).tobytes(), check=True)
 
 def assemble(path, units, segs, nlines, st):
@@ -244,7 +251,8 @@ def assemble(path, units, segs, nlines, st):
         seg = pad(seg).copy()
         if len(seg) > 2 * fade:
             seg[:fade] *= np.linspace(0, 1, fade, dtype=np.float32)
-            seg[-fade:] *= np.linspace(1, 0, fade, dtype=np.float32)
+            tail = min(int(0.035 * SR), len(seg) // 4)   # let the last word die away, no abrupt cut
+            seg[-tail:] *= np.linspace(1, 0, tail, dtype=np.float32) ** 2
         if cues[n] is None:
             cues[n] = round(t, 2)
         if st['even']:   # spread word starts by syllables across the spoken part
@@ -281,7 +289,8 @@ def main():
     manifest = json.load(open(man_path, encoding='utf8')) if os.path.exists(man_path) else {}
     only = set(filter(None, args.only.split(',')))
     data = load_texts()
-    jobs = [(c['id'], c['lines'], ['lay']) for c in data['chants']]   # the slow 'monk' style was removed from the app + \
+    # the slow 'monk' style was removed from the app
+    jobs = [(c['id'], c['lines'], ['lay']) for c in data['chants']] + \
            [(t['id'], t['lines'], ['topic']) for t in data['topics']]
     failed = []
     for key_id, lines, styles in jobs:
@@ -304,26 +313,36 @@ def main():
                     print(f'{fname:30s} {nlines} lines · {len(units)} units{note}', flush=True)
                     continue
                 best = {}
-                for p in range(PASSES if st['even'] else 1):
-                    segs = render_units(cfg, units, st, rates)
-                    if not st['even']:
-                        break
-                    want = [sum(u[3]) * st['syl_ms'] / 1000 * u[6] for u in units]
-                    for i, (sg, w) in enumerate(zip(segs, want)):
-                        err = 0 if units[i][5] else abs(len(sg) / SR / w - 1)   # Thai prose: natural pace, keep as is
+                want = [sum(u[3]) * st['syl_ms'] / 1000 * u[6] for u in units]
+                chant = [i for i, u in enumerate(units) if not u[5]]
+                def score(segs):
+                    for i, sg in enumerate(segs):
+                        err = 0 if units[i][5] else abs(len(sg) / SR / want[i] - 1)   # Thai prose: natural pace
                         if i not in best or err < best[i][0]:
                             best[i] = (err, sg)
-                    chant = [i for i, u in enumerate(units) if not u[5]]
                     per = [(len(best[i][1]) / SR) / sum(units[i][3]) / units[i][6] for i in chant] or [1]
                     mean = sum(per) / len(per)
-                    cv = (sum((v - mean) ** 2 for v in per) / len(per)) ** 0.5 / mean * 100
-                    note += f' pass{p + 1}: {mean * 1000:.0f}ms±{cv:.0f}%'
-                    for i, (sg, w) in enumerate(zip(segs, want)):   # damped correction
-                        if units[i][5]:
-                            continue
-                        cur = rates.get(i, st['start_rate'] / units[i][6])
-                        floor = 0.4 if units[i][6] > 1 else 0.6   # phrases asked to be slower may go further
-                        rates[i] = min(1.6, max(floor, cur * (len(sg) / SR / w) ** 0.7))
+                    return f'{mean * 1000:.0f}ms±{(sum((v - mean) ** 2 for v in per) / len(per)) ** 0.5 / mean * 100:.0f}%'
+                if not st['even']:
+                    segs = render_units(cfg, units, st, rates)
+                else:
+                    # 1) probe at normal speed, 2) ONE speed for the whole chant (big speed swings change
+                    # the voice's timbre and sound like another speaker), 3) small ±8% touch-ups per phrase.
+                    probe = render_units(cfg, units, st, {i: 1.0 / units[i][6] for i in chant})
+                    ratio = sorted(len(probe[i]) / SR / want[i] for i in chant) or [1]
+                    g = min(1.15, max(0.85, ratio[len(ratio) // 2]))
+                    rates = {i: g / units[i][6] for i in chant}
+                    segs = render_units(cfg, units, st, rates)
+                    note += f' global rate {g:.2f}: {score(segs)}'
+                    fix = {}
+                    for i in chant:
+                        d = len(segs[i]) / SR / want[i]
+                        if abs(d - 1) > 0.04:
+                            fix[i] = rates[i] * min(1.08, max(0.92, d))
+                    if fix:
+                        rates.update(fix)
+                        segs2 = render_units(cfg, units, st, rates)
+                        note += f' → touch-up {len(fix)}: {score(segs2)}'
                 if st['even']:
                     segs = [best[i][1] for i in range(len(units))]
                     for i, u in enumerate(units):   # a phrase asked to be slower that the voice still rushes: stretch only it
