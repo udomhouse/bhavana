@@ -4,7 +4,8 @@
 
 - ผู้พัฒนา: **Udom House**
 - รหัสแอป: `com.udomhouse.bhavana`
-- สินค้า Premium: `premium_lifetime`
+- สินค้า Premium: `premium_lifetime` (Non-Consumable · A$1.99 / ฿49)
+- สินค้าทดลองใช้: `trial_7day` (Non-Consumable · **ราคา 0 / Free** · ชื่อที่แสดง "7-day Trial") เฉพาะ App Store
 
 ---
 
@@ -47,6 +48,7 @@ Bhāvanā (ภาวนา) หนังสือสวดมนต์สำห�
 💬 ห้องสนทนาธรรม
 ตั้งคำถามเรื่องชีวิตประจำวัน แลกเปลี่ยนมุมมองธรรมะด้วยเมตตา
 
+ทดลองใช้ Premium ฟรี ๗ วัน ไม่ต้องผูกบัตร ไม่มีการตัดเงินอัตโนมัติ
 Premium (จ่ายครั้งเดียว ใช้ได้ตลอดไป): สวดไม่จำกัด รายการโปรด Praylist ของตัวเอง และร่วมตอบในห้องสนทนาธรรม
 เวอร์ชันฟรีสวดได้วันละ ๓ บท ฟังธรรมะและนั่งสมาธิได้ไม่จำกัด
 
@@ -75,6 +77,7 @@ Bhāvanā is a Thai Buddhist chanting book for lay people — as easy to follow 
 • Dhamma explained: Four Noble Truths, Brahmavihāra, Five Aggregates, Three Characteristics
 • Dhamma discussion room for everyday questions
 
+Try Premium free for 7 days — no card, no automatic charge.
 Premium (one-time purchase): unlimited chanting, favourites, your own Praylists, and posting in the discussion room. The free version includes 3 chants a day, all Dhamma talks and meditation.
 
 No ads. No tracking. Your practice data stays on your device.
@@ -127,6 +130,11 @@ Premium: one-time non-consumable in-app purchase "premium_lifetime". Without it,
 chant 3 different chants per day; favourites, custom Praylists and posting in the discussion
 room require Premium. "Restore Purchases" is on the Premium screen and in Settings.
 
+Free trial: a free non-consumable "trial_7day" ("7-day Trial", price Free) per guideline 3.1.1.
+On first launch the app offers it on a screen that states the 7-day duration, which features
+lock afterwards, and the one-time price for full access. Nothing is charged automatically.
+The trial can also be started from the Premium screen or Settings.
+
 User-generated content (Dhamma discussion room, tab 2): users must accept community rules
 before posting; posts are filtered for profanity and links; every post has a ⋯ menu to report
 it (3 reports hide it automatically) or to hide all posts from that user; we moderate and can
@@ -141,6 +149,7 @@ Notifications are local (holy-day and streak reminders), requested from a button
 - [ ] `www/config.js` แก้ `testMode: true` เป็น `testMode: false` (ปิดปุ่มเปิด Premium ทดสอบ)
 - [x] อีเมลติดต่อ: admin@udom-bhavana.com (ใส่ใน Privacy Policy, Review Notes และแอปแล้ว)
 - [ ] สร้างสินค้า `premium_lifetime` ในทั้งสองร้านแล้ว
+- [ ] App Store: สร้าง Non-Consumable `trial_7day` ราคา Free ชื่อ "7-day Trial" (Google Play ไม่ต้องสร้าง แอปจะเริ่มทดลองใช้ในเครื่องเอง)
 - [ ] เวอร์ชันแอป: ครั้งแรกใช้ 1.0.0 (build 1) ครั้งต่อไปต้องเพิ่มเลข build ทุกครั้ง
 - [ ] ได้รับอนุญาตใช้ฟอนต์ ChulaNarak จาก TEPC (หรือเปลี่ยนเป็น Krub ก่อน)
 
