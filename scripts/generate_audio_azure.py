@@ -276,7 +276,35 @@ def tone_glitch(x):
         longest = max(longest, run)
     return longest * h / SR
 
+def sing_measure(x):
+    """(pitch range in semitones, longest held note in s) — a sung take swings in pitch like a melody
+    and holds vowels on one note; reading does neither. The phrase-final syllable may linger, so the
+    last 0.6 s is left out of the held-note measure."""
+    n, h = int(0.04 * SR), int(0.01 * SR)
+    floor = 0.12 * float(np.sqrt((x ** 2).mean())) if len(x) else 0
+    f = []
+    for s in range(0, len(x) - n, h):
+        fr = x[s:s + n]
+        if np.sqrt((fr ** 2).mean()) < floor:
+            f.append(0); continue
+        fr = fr - fr.mean()
+        ac = np.correlate(fr, fr, 'full')[n - 1:]
+        lo, hi = SR // 350, SR // 60
+        k = lo + int(np.argmax(ac[lo:hi]))
+        f.append(SR / k if ac[0] > 0 and ac[k] / ac[0] > .5 else 0)
+    v = [p for p in f if p]
+    if len(v) < 10:
+        return 0.0, 0.0
+    rng = 12 * np.log2(np.percentile(v, 95) / np.percentile(v, 5))
+    body = f[:max(0, len(f) - 60)]
+    best = run = 0; prev = 0
+    for p in body:
+        run = run + 1 if p and prev and abs(p - prev) / prev < 0.04 else 0
+        best = max(best, run); prev = p
+    return float(rng), best * h / SR
+
 GLITCH_S = 0.12
+SING_RANGE, SING_HOLD = 16.0, 0.35
 JITTER = [0, 0.01, -0.01, 0.02, -0.02, 0.03, -0.03, 0.04]
 glitch_log = []
 
@@ -286,12 +314,14 @@ def speak_clean(cfg, text, rate):
     for d in JITTER:
         x = speak(cfg, text, round(rate + d, 2))
         g = tone_glitch(x)
-        if best is None or g < best[0]:
-            best = (g, x)
-        if g < GLITCH_S:
+        rng, hold = sing_measure(x)
+        bad = 10 * max(0, g - GLITCH_S + 0.01) + 3 * max(0, hold - SING_HOLD) + 0.1 * max(0, rng - SING_RANGE)
+        if best is None or bad < best[0]:
+            best = (bad, x, g, rng, hold)
+        if bad == 0:
             if d: glitch_log.append(f'fixed {text[:24]}')
             return x
-    glitch_log.append(f'STILL {best[0]:.2f}s {text[:24]}')
+    glitch_log.append(f'STILL tone {best[2]:.2f}s range {best[3]:.0f}st hold {best[4]:.2f}s {text[:24]}')
     return best[1]
 
 def render_units(cfg, units, st, rates):
