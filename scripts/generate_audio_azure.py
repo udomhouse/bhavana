@@ -64,6 +64,7 @@ PRONOUNCE = {
     'ธาตุ': 'ทา ตุ',
     'หุลู': 'หุ, ลู',          # keep ลู level (not หลู)
     'เวทะนาขันโธ': 'เวดทะนา ขันโธ',
+    'ฏฐ': 'ตถ',               # ปะติฏฐาสิ → ปะ-ติด-ถา-สิ (must come before ฏ)
     'ฏ': 'ต',                  # สุปะฏิปันโน → สุ-ปะ-ติ-ปัน-โน
     'โหตุ': 'โห ตุ',
     'มารดา': 'มานดา',
@@ -238,13 +239,47 @@ def speak(cfg, text, rate):
     x.astype(np.float32).tofile(path)
     return x
 
+def tone_glitch(x):
+    """Seconds of the longest pure-tone stretch: the voice model sometimes hums a steady sine
+    (heard as ringing or a bell) instead of speech. Speech always has harmonics; a tone does not."""
+    n, h = int(0.04 * SR), int(0.02 * SR)
+    win = np.hanning(n).astype(np.float32)
+    longest = run = 0
+    for s in range(0, len(x) - n, h):
+        fr = x[s:s + n]
+        if np.sqrt((fr ** 2).mean()) < 0.02:
+            run = 0; continue
+        sp = np.abs(np.fft.rfft(fr * win)) ** 2
+        k = int(np.argmax(sp[3:])) + 3
+        run = run + 1 if sp[max(0, k - 2):k + 3].sum() / sp.sum() > 0.85 else 0
+        longest = max(longest, run)
+    return longest * h / SR
+
+GLITCH_S = 0.12
+JITTER = [0, 0.01, -0.01, 0.02, -0.02, 0.03, -0.03, 0.04]
+glitch_log = []
+
+def speak_clean(cfg, text, rate):
+    """speak(), retried at a hair's different speed while the take contains a pure-tone glitch."""
+    best = None
+    for d in JITTER:
+        x = speak(cfg, text, round(rate + d, 2))
+        g = tone_glitch(x)
+        if best is None or g < best[0]:
+            best = (g, x)
+        if g < GLITCH_S:
+            if d: glitch_log.append(f'fixed {text[:24]}')
+            return x
+    glitch_log.append(f'STILL {best[0]:.2f}s {text[:24]}')
+    return best[1]
+
 def render_units(cfg, units, st, rates):
     """Synthesize every unit on its own and return one audio array per unit."""
     def one(i):
         u = units[i]
         base = st.get('start_rate', st.get('rate', 1.0))
         r = round(base if u[5] else rates.get(i, base / u[6]), 2)
-        x = speak(cfg, u[4], r)
+        x = speak_clean(cfg, u[4], r)
         return tighten(x) if st['even'] and not u[5] else x
     with ThreadPoolExecutor(WORKERS) as ex:
         return list(ex.map(one, range(len(units))))
@@ -379,6 +414,8 @@ def main():
                 if st['even']:
                     entry['words'][slot] = anchors
                 print(f'{fname:30s} {nlines} lines · {len(units)} units{note}', flush=True)
+                if glitch_log:
+                    print('   glitches:', ' | '.join(dict.fromkeys(glitch_log)), flush=True); glitch_log.clear()
         except Exception as e:
             print(f'FAILED {key_id}: {e}', flush=True); failed.append(key_id); continue
         if not entry['words']:
