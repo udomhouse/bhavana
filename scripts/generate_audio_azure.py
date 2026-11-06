@@ -308,14 +308,20 @@ SING_RANGE, SING_HOLD = 16.0, 0.35
 JITTER = [0, 0.01, -0.01, 0.02, -0.02, 0.03, -0.03, 0.04]
 glitch_log = []
 
+# Chants read like plain speech: each line in one go at the voice's own pace, with stricter
+# take selection (the listener picked this style for ศีล ๕ by ear: store/voice-test/sila5-A-whole-line.mp3)
+NATURAL = {'sila5'}
+STRICT = None   # set while rendering a NATURAL chant: (glitch, hold, range, extra jitter)
+
 def speak_clean(cfg, text, rate):
     """speak(), retried at a hair's different speed while the take contains a pure-tone glitch."""
     best = None
-    for d in JITTER:
+    gl, sh, sr, extra = STRICT or (GLITCH_S - 0.01, SING_HOLD, SING_RANGE, [])
+    for d in JITTER + extra:
         x = speak(cfg, text, round(rate + d, 2))
         g = tone_glitch(x)
         rng, hold = sing_measure(x)
-        bad = 10 * max(0, g - GLITCH_S + 0.01) + 3 * max(0, hold - SING_HOLD) + 0.1 * max(0, rng - SING_RANGE)
+        bad = 10 * max(0, g - gl) + 3 * max(0, hold - sh) + 0.1 * max(0, rng - sr)
         if best is None or bad < best[0]:
             best = (bad, x, g, rng, hold)
         if bad == 0:
@@ -410,6 +416,12 @@ def main():
                 slot = 'lay' if sname == 'topic' else sname
                 fname = (key_id.replace(':', '-') + '.mp3') if sname == 'topic' else f'{key_id}-{sname}.mp3'
                 units, nlines = units_of(lines, st['even'])
+                global STRICT
+                STRICT = None
+                if key_id in NATURAL and st['even']:   # one unit per line, natural pace
+                    units = [(n, 0, [w for u in units if u[0] == n for w in u[2]], [y for u in units if u[0] == n for y in u[3]],
+                              ' '.join(u[4] for u in units if u[0] == n), True, 1.0) for n in range(nlines)]
+                    STRICT = (0.11, 0.25, 12.0, [0.05, -0.05, 0.06])
                 rates, note = {}, ''
                 if sname == 'monk' and lay_segs is not None:   # same voice, same phrases: only pauses/stretch/echo differ
                     segs, note = lay_segs, ' (from normal style)'
