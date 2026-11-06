@@ -16,3 +16,4 @@ ios/App/build/
 ios/DerivedData/
 xcuserdata/
 scripts/.tts-cache/
+__pycache__/
