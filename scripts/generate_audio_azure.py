@@ -64,6 +64,20 @@ PRONOUNCE = {
     'ธาตุ': 'ทา ตุ',
     'หุลู': 'หุ, ลู',          # keep ลู level (not หลู)
     'เวทะนาขันโธ': 'เวดทะนา ขันโธ',
+    # listener's corrections, round 3 (words with ฏฐ first, before the general ฏฐ rule)
+    'ปิฏฐิภาคัสมิง': 'ปิดทิพาคัดสะ มิง',
+    'ปะติฏฐาสิ': 'ปะติดทาสิ',
+    'เอหิปัสสิโก': 'เอหิ ปัดสิโก',
+    'หีโน': 'ฮีโน',
+    'ชาติ': 'ชา ติ',
+    'ชาตุ': 'ชา ตุ',
+    'อายัสมะโต': 'อายัด สะมะโต',
+    'เทวา': 'เท วา',
+    'โลกัสมิง': 'โลกัดสะ มิง',
+    'ขุททัง': 'ขุดทัง',
+    'พรัหม': 'พรัมม',          # พรัหมัง → พรัม-มัง (and พรัหมะ…, like พรหมา)
+    'ฤา': 'รือ',
+    'อัพยาปัชฌา': 'อัพพะยาปัดชา',
     'ฏฐ': 'ตถ',               # ปะติฏฐาสิ → ปะ-ติด-ถา-สิ (must come before ฏ)
     'ฏ': 'ต',                  # สุปะฏิปันโน → สุ-ปะ-ติ-ปัน-โน
     'โหตุ': 'โห ตุ',
@@ -95,7 +109,13 @@ def load_texts():
     js = subprocess.run(['node', os.path.join(ROOT, 'scripts', 'export-texts.mjs')], capture_output=True, text=True, check=True)
     return json.loads(js.stdout)
 
+# whole words only (a plain replace would also hit them inside longer words)
+EXACT = {'หิ': 'ฮิ'}   # นะ หิ ชาตุ → นะ ฮิ ชา ตุ
+
 def spoken_text(t):
+    core = t.strip(',.;:')
+    if core in EXACT:
+        t = t.replace(core, EXACT[core])
     t = t.replace('ฯ', '').replace('ฺ', '').replace('-', ' ')   # phinthu confuses the voice; ยะ-ธา-พุท is read per syllable
     t = re.sub(r'[;:()"“”]', ' ', t)
     t = re.sub(r'(\S+?)ๆ', r'\1 \1', t)   # ไม้ยมก: เพ็งๆ → เพ็ง เพ็ง
