@@ -245,9 +245,10 @@ def tone_glitch(x):
     n, h = int(0.04 * SR), int(0.02 * SR)
     win = np.hanning(n).astype(np.float32)
     longest = run = 0
+    floor = 0.12 * float(np.sqrt((x ** 2).mean())) if len(x) else 0   # relative: takes are not normalised yet
     for s in range(0, len(x) - n, h):
         fr = x[s:s + n]
-        if np.sqrt((fr ** 2).mean()) < 0.02:
+        if np.sqrt((fr ** 2).mean()) < floor:
             run = 0; continue
         sp = np.abs(np.fft.rfft(fr * win)) ** 2
         k = int(np.argmax(sp[3:])) + 3
