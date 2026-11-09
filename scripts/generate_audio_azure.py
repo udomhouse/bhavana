@@ -48,6 +48,37 @@ VOWELS = set('ะาิีึืุูัเแโไใำ')
 
 # How a word should sound when the written form misleads the voice (display text is unchanged).
 PRONOUNCE = {
+    # listener's review page, Nov 2026 (longer words first: a plain replace runs in this order)
+    'อัพภุคคะโต': 'อับพุคคะโต',
+    'พุทธัสสาหัสมิ': 'พุดทัสสาหัดสะมิ',
+    'สังฆัสสาหัสมิ': 'สังคัดสะหัดสะมิ',
+    'โกณฑัญโญ': 'โกนทันโย',
+    'โมคคัลลาโน': 'โมกคันลาโน',
+    'ขันธะโมระปะริตตัญจะ': 'ขันธะโมระปะริดตันจะ',
+    'สัคคะโมกขะทัง': 'สักคะโมกขะทัง',
+    'ทุกโข': 'ทุก โข',
+    'ปะหีนันติ': 'ปะฮีนันติ',
+    'โลกัสมินติ': 'โลกัดสะมินติ',
+    'สัททะมะนุสสาเวสุง': 'สัดทะมะนุดสาเวสุง',
+    'เทวะมะนุสสานัง': 'เทวะมะนุดสานัง',
+    'มาราติเรกะมะภิยุชฌิตะสัพพะรัตติง': 'มาราติเรกะมะภิยุดชิตะสัพพะรัดติง',
+    'กัตวานะ': 'กัดตะวานะ',
+    'ทุคคาหะทิฏฐิภุชะเคนะ': 'ทุกคาหะทิดถิพุชะเคนะ',
+    'มานะสัมภาวะเย': 'มานะสำพาวะเย',
+    'จะตุปปะเทหิ': 'จะตุบปะเทฮิ',
+    'ธัมมัง': 'ทำมัง',
+    'บิดามารดา': 'บิดา มานดา',
+    'มะหาเถรัง': 'มะหาเถ รัง',
+    'ฤๅ': 'รือ',
+    'ชานามิ': 'ชา นามิ',
+    'ชีวิตัง': 'ชีวิ ตัง',
+    'ฉุฑโฑ': 'ฉุดทะโท',
+    'สิกขาปะทัง': 'สิกขา ปะทัง',
+    'ตะติยัมปิ': 'ตะติ ยัมปิ',
+    'วิริเยสุ': 'วิริ เยสุ',
+    'นะมามิ': 'นะ มามิ',
+    'เหตุโปวะ': 'เหตุ โปวะ',
+    'ฬ': 'ล',                   # จักกะวาฬะ → จัก-กะ-วา-ละ
     'วิญญูหีติ': 'วินยูฮีติ',
     'วิญญูหิ': 'วินยูฮิ',
     'โหมิ': 'โห, มิ',         # two syllables โห-มิ; a plain space still came out as โห-หมิ
@@ -137,7 +168,9 @@ def units_of(lines, even):
                 cur.append(wi)
                 if raw.endswith(',') or wi == len(toks) - 1:
                     words = [spoken_text(toks[i]).strip(',.') for i in cur]
-                    text = ' '.join(w for w in words if w)
+                    ws = [w for w in words if w]
+                    # a run of one-syllable words (โส โส สะ สะ อะ …): the voice drops some unless each is set apart
+                    text = (', ' if len(ws) >= 6 and all(syllables(w) <= 1 for w in ws) else ' ').join(ws)
                     prose = is_thai_prose(text)
                     weights = [max(1, len(w) // 3) for w in words] if prose else [syllables(w) for w in words]
                     factor = max([f for k, f in SLOWER.items() if k in text] or [1.0])
@@ -239,25 +272,27 @@ def stretch_seg(seg, tempo):
 def pad(seg, pre=0.03, post=0.06):
     return np.concatenate([np.zeros(int(pre * SR), np.float32), seg, np.zeros(int(post * SR), np.float32)])
 
-def trim(x):
-    """Cut leading and trailing silence."""
+def trim(x, lead=0.06, tail=0.10):
+    """Cut leading and trailing silence, keeping a margin so soft onsets (ส, ข, ฉ) and the
+    last syllable's release are not clipped."""
     runs = silences(x, 0.02)
     a = runs[0][1] if runs and runs[0][0] == 0 else 0
     b = runs[-1][0] if runs and runs[-1][1] >= len(x) else len(x)
+    a = max(0, a - int(lead * SR)); b = min(len(x), b + int(tail * SR))
     return x[a:b] if b > a else x
 
 def speak(cfg, text, rate):
     """One phrase → audio (cached by voice, rate and text)."""
-    key = hashlib.sha1(f'{VOICE}|{rate:.3f}|{text}'.encode()).hexdigest()
+    key = hashlib.sha1(f'{VOICE}|{rate:.3f}|{text}|raw'.encode()).hexdigest()
     path = os.path.join(CACHE, key + '.f32')
-    if os.path.exists(path):
-        return np.fromfile(path, dtype=np.float32)
+    if os.path.exists(path):   # the cache keeps the untouched take; trimming happens on load
+        return trim(np.fromfile(path, dtype=np.float32))
     ssml = (f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="th-TH">'
             f'<voice name="{VOICE}"><prosody rate="{rate:.3f}">{escape(text)}</prosody></voice></speak>')
-    x = trim(synthesize(cfg, ssml))
+    raw = synthesize(cfg, ssml)
     os.makedirs(CACHE, exist_ok=True)
-    x.astype(np.float32).tofile(path)
-    return x
+    raw.astype(np.float32).tofile(path)
+    return trim(raw)
 
 def tone_glitch(x):
     """Seconds of the longest pure-tone stretch: the voice model sometimes hums a steady sine
@@ -330,14 +365,115 @@ def speak_clean(cfg, text, rate):
     glitch_log.append(f'STILL tone {best[2]:.2f}s range {best[3]:.0f}st hold {best[4]:.2f}s {text[:24]}')
     return best[1]
 
+def frames(x, n=0.04, h=0.01):
+    """(rms, share of energy in the strongest spectral peak) per 10 ms frame."""
+    n, h = int(n * SR), int(h * SR)
+    win = np.hanning(n).astype(np.float32)
+    out = []
+    for s in range(0, max(1, len(x) - n), h):
+        fr = x[s:s + n]
+        if len(fr) < n:
+            break
+        sp = np.abs(np.fft.rfft(fr * win)) ** 2
+        k = int(np.argmax(sp[3:])) + 3
+        out.append((float(np.sqrt((fr ** 2).mean())), float(sp[max(0, k - 2):k + 3].sum() / (sp.sum() + 1e-12))))
+    return out
+
+HUM_KEEP = 0.12
+def trim_tail_hum(x):
+    """The voice ends phrases on a long, nearly pure hum of the final ง/น/ม (heard as ringing).
+    Keep at most HUM_KEEP s of it and fade out."""
+    fr = frames(x)
+    if len(fr) < 20:
+        return x
+    mx = max(r for r, _ in fr)
+    last = max((i for i, (r, _) in enumerate(fr) if r > 0.05 * mx), default=None)
+    if last is None:
+        return x
+    i = last
+    while i > 0 and fr[i - 1][1] > 0.55 and fr[i - 1][0] > 0.03 * mx:
+        i -= 1
+    run = (last - i) * 0.01
+    if run > HUM_KEEP + 0.04:
+        cut = int((i * 0.01 + HUM_KEEP) * SR)
+    else:
+        # no long hum: still cut the echo-like decay once the last syllable has faded to a fifth
+        j = last
+        top = max(r for r, _ in fr[max(0, last - 30):last + 1])
+        while j > 0 and fr[j][0] < 0.2 * top:
+            j -= 1
+        cut = int((j + 4) * 0.01 * SR)   # frame start + window
+        if cut >= len(x) - int(0.03 * SR):
+            return x
+    fade = int(0.06 * SR)
+    y = x[:cut + fade].copy()
+    y[-fade:] *= np.linspace(1, 0, fade, dtype=np.float32) ** 2
+    return y
+
+def rubberband_map(x, src, dst):
+    """Time-stretch x piecewise: sample src[i] lands on dst[i] (pitch and timbre kept)."""
+    import wave
+    with tempfile.TemporaryDirectory() as d:
+        fi, fo, fm = os.path.join(d, 'i.wav'), os.path.join(d, 'o.wav'), os.path.join(d, 'm.txt')
+        with wave.open(fi, 'wb') as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
+            w.writeframes((np.clip(x, -1, 1) * 32767).astype(np.int16).tobytes())
+        with open(fm, 'w') as f:
+            f.write(''.join(f'{a} {b}\n' for a, b in zip(src[1:-1], dst[1:-1])))
+        subprocess.run(['rubberband', '-q', '-3', '-M', fm, '-D', f'{dst[-1] / SR:.4f}', fi, fo], check=True, capture_output=True)
+        with wave.open(fo, 'rb') as w:
+            return np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32) / 32767
+
+EVEN_ALPHA = 0.6
+def even_syllables(x, nsyl):
+    """Chanting gives every syllable about the same length; the voice rushes some (often the first
+    syllable of a phrase and the middle of long compounds). Find syllable boundaries from the
+    loudness dips and move each syllable's length most of the way toward the phrase average,
+    keeping the phrase's total length."""
+    if nsyl < 2 or len(x) < 0.35 * SR:
+        return x
+    h = int(0.01 * SR)
+    env = np.array([np.sqrt((x[i:i + h] ** 2).mean()) for i in range(0, len(x) - h, h)])
+    env = np.convolve(env, np.ones(3) / 3, mode='same')
+    pk = env.max()
+    cands = []
+    for i in range(4, len(env) - 4):
+        if env[i] == env[max(0, i - 3):i + 4].min():
+            depth = min(env[max(0, i - 15):i].max(), env[i + 1:i + 16].max()) - env[i]
+            if depth > 0.15 * pk:
+                cands.append((depth, i))
+    sel = []
+    for dep, i in sorted(cands, reverse=True):
+        if len(sel) == nsyl - 1:
+            break
+        if all(abs(i - j) >= 6 for j in sel) and i > 5 and i < len(env) - 6:
+            sel.append(i)
+    if len(sel) < max(1, 0.6 * (nsyl - 1)):
+        return x
+    b = [0] + [i * h for i in sorted(sel)] + [len(x)]
+    d = np.diff(b).astype(float)
+    D = d.mean()
+    new = d ** (1 - EVEN_ALPHA) * D ** EVEN_ALPHA
+    new = np.clip(new, d * 0.6, d * 2.5)
+    new *= d.sum() / new.sum()
+    if np.abs(new / d - 1).max() < 0.08:
+        return x
+    dst = np.concatenate([[0], np.cumsum(new)]).round().astype(int)
+    try:
+        return rubberband_map(x, b, list(dst))
+    except Exception:
+        return x
+
 def render_units(cfg, units, st, rates):
     """Synthesize every unit on its own and return one audio array per unit."""
     def one(i):
         u = units[i]
         base = st.get('start_rate', st.get('rate', 1.0))
         r = round(base if u[5] else rates.get(i, base / u[6]), 2)
-        x = speak_clean(cfg, u[4], r)
-        return tighten(x) if st['even'] and not u[5] else x
+        x = trim_tail_hum(speak_clean(cfg, u[4], r))
+        if st['even'] and not u[5]:
+            x = even_syllables(tighten(x), sum(u[3]))
+        return x
     with ThreadPoolExecutor(WORKERS) as ex:
         return list(ex.map(one, range(len(units))))
 
