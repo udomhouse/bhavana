@@ -472,7 +472,9 @@ def render_units(cfg, units, st, rates):
         r = round(base if u[5] else rates.get(i, base / u[6]), 2)
         x = trim_tail_hum(speak_clean(cfg, u[4], r))
         if st['even'] and not u[5]:
-            x = even_syllables(tighten(x), sum(u[3]))
+            t = tighten(x)
+            y = even_syllables(t, sum(u[3]))
+            x = y if tone_glitch(y) < GLITCH_S else t   # stretching a held vowel can itself ring
         return x
     with ThreadPoolExecutor(WORKERS) as ex:
         return list(ex.map(one, range(len(units))))
