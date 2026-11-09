@@ -42,12 +42,14 @@ TIGHTEN = (0.16, 0.07)     # inside a phrase, breaths longer than 0.16 s become 
 STYLES = {
     'lay':   dict(even=True, syl_ms=280, comma_ms=700, gap=1000, echo=False, start_rate=1.0),
     'monk':  dict(even=True, syl_ms=280, comma_ms=650, gap=880,  echo=True,  start_rate=1.0, stretch=0.88),
-    'topic': dict(even=False, rate=1.0, gap=900, echo=False),
+    'topic': dict(even=False, rate=0.95, gap=900, echo=False),   # a touch slower: listeners found some words rushed
 }
 VOWELS = set('ะาิีึืุูัเแโไใำ')
 
 # How a word should sound when the written form misleads the voice (display text is unchanged).
 PRONOUNCE = {
+    'ฆราวาสธรรม': 'คราวาดทำ',
+    'นิโรธเป็น': 'นิโรด เป็น',
     # listener's review page, Nov 2026 (longer words first: a plain replace runs in this order)
     'อัพภุคคะโต': 'อับพุคคะโต',
     'พุทธัสสาหัสมิ': 'พุดทัสสาหัดสะมิ',
@@ -141,7 +143,7 @@ def load_texts():
     return json.loads(js.stdout)
 
 # whole words only (a plain replace would also hit them inside longer words)
-EXACT = {'หิ': 'ฮิ'}   # นะ หิ ชาตุ → นะ ฮิ ชา ตุ
+EXACT = {'หิ': 'ฮิ', 'ทมะ': 'ทะมะ', 'นิโรธ': 'นิโรด'}   # นะ หิ ชาตุ → นะ ฮิ ชา ตุ
 
 def spoken_text(t):
     core = t.strip(',.;:')
@@ -338,6 +340,19 @@ def sing_measure(x):
         best = max(best, run); prev = p
     return float(rng), best * h / SR
 
+def music_bed(x):
+    """The voice model sometimes lays music under a long take. Speech leaves near-silent gaps
+    every few seconds; music fills them. Returns the smallest share of near-silent 20 ms frames in
+    any 4 s window (speech: 0.1-0.35, with music: ~0)."""
+    h, w = int(0.02 * SR), 200
+    if len(x) < 4.5 * SR:
+        return 1.0
+    r = np.array([np.sqrt((x[i:i + h] ** 2).mean()) for i in range(0, len(x) - h, h)])
+    md = float(np.median(r[r > 0])) if (r > 0).any() else 0
+    q = (r < 0.03 * md).astype(float)
+    return min(q[i:i + w].mean() for i in range(0, max(1, len(q) - w), 50))
+
+MUSIC_MIN = 0.06
 GLITCH_S = 0.12
 SING_RANGE, SING_HOLD = 16.0, 0.35
 JITTER = [0, 0.01, -0.01, 0.02, -0.02, 0.03, -0.03, 0.04]
@@ -356,7 +371,7 @@ def speak_clean(cfg, text, rate):
         x = speak(cfg, text, round(rate + d, 2))
         g = tone_glitch(x)
         rng, hold = sing_measure(x)
-        bad = 10 * max(0, g - gl) + 3 * max(0, hold - sh) + 0.1 * max(0, rng - sr)
+        bad = 10 * max(0, g - gl) + 3 * max(0, hold - sh) + 0.1 * max(0, rng - sr) + 20 * max(0, MUSIC_MIN - music_bed(x))
         if best is None or bad < best[0]:
             best = (bad, x, g, rng, hold)
         if bad == 0:
@@ -569,7 +584,7 @@ def main():
                     print(f'{fname:30s} {nlines} lines · {len(units)} units{note}', flush=True)
                     continue
                 best = {}
-                want = [sum(u[3]) * st['syl_ms'] / 1000 * u[6] for u in units]
+                want = [sum(u[3]) * st.get('syl_ms', 280) / 1000 * u[6] for u in units]
                 chant = [i for i, u in enumerate(units) if not u[5]]
                 def score(segs):
                     for i, sg in enumerate(segs):
