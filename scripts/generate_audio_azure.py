@@ -33,7 +33,7 @@ OUT = os.path.join(ROOT, 'www', 'audio')
 VOICE = 'th-TH-Nattapong:MAI-Voice-2.1'
 SR = 24000
 WORKERS = 4                # parallel requests
-CACHE = os.path.join(ROOT, 'scripts', '.tts-cache')
+CACHE = os.path.join(ROOT, 'scripts', '.tts-cache-pcm')   # takes as delivered (uncompressed WAV)
 TIGHTEN = (0.16, 0.07)     # inside a phrase, breaths longer than 0.16 s become 0.07 s
 
 # Chant styles ("even"): syl_ms target length per syllable · comma_ms pause between phrases of a line ·
@@ -189,7 +189,7 @@ def decode(path):
     return np.frombuffer(raw, dtype=np.float32).copy()
 
 def synthesize(cfg, ssml):
-    with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
         path = tmp.name
     try:
         for attempt in range(6):
@@ -371,7 +371,8 @@ def speak_clean(cfg, text, rate):
         x = speak(cfg, text, round(rate + d, 2))
         g = tone_glitch(x)
         rng, hold = sing_measure(x)
-        bad = 10 * max(0, g - gl) + 3 * max(0, hold - sh) + 0.1 * max(0, rng - sr) + 20 * max(0, MUSIC_MIN - music_bed(x))
+        bad = (10 * max(0, g - gl) + 3 * max(0, hold - sh) + 0.1 * max(0, rng - sr)
+               + 20 * max(0, MUSIC_MIN - music_bed(x)) + 5 * max(0, FIRST_MIN - first_syllable(x)))
         if best is None or bad < best[0]:
             best = (bad, x, g, rng, hold)
         if bad == 0:
@@ -425,59 +426,21 @@ def trim_tail_hum(x):
     y[-fade:] *= np.linspace(1, 0, fade, dtype=np.float32) ** 2
     return y
 
-def rubberband_map(x, src, dst):
-    """Time-stretch x piecewise: sample src[i] lands on dst[i] (pitch and timbre kept)."""
-    import wave
-    with tempfile.TemporaryDirectory() as d:
-        fi, fo, fm = os.path.join(d, 'i.wav'), os.path.join(d, 'o.wav'), os.path.join(d, 'm.txt')
-        with wave.open(fi, 'wb') as w:
-            w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
-            w.writeframes((np.clip(x, -1, 1) * 32767).astype(np.int16).tobytes())
-        with open(fm, 'w') as f:
-            f.write(''.join(f'{a} {b}\n' for a, b in zip(src[1:-1], dst[1:-1])))
-        subprocess.run(['rubberband', '-q', '-3', '-M', fm, '-D', f'{dst[-1] / SR:.4f}', fi, fo], check=True, capture_output=True)
-        with wave.open(fo, 'rb') as w:
-            return np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32) / 32767
-
-EVEN_ALPHA = 0.6
-def even_syllables(x, nsyl):
-    """Chanting gives every syllable about the same length; the voice rushes some (often the first
-    syllable of a phrase and the middle of long compounds). Find syllable boundaries from the
-    loudness dips and move each syllable's length most of the way toward the phrase average,
-    keeping the phrase's total length."""
-    if nsyl < 2 or len(x) < 0.35 * SR:
-        return x
+def first_syllable(x):
+    """Seconds from the onset to the first clear loudness dip: the voice sometimes clips the first
+    syllable of a phrase (heard as a missing word)."""
     h = int(0.01 * SR)
     env = np.array([np.sqrt((x[i:i + h] ** 2).mean()) for i in range(0, len(x) - h, h)])
-    env = np.convolve(env, np.ones(3) / 3, mode='same')
-    pk = env.max()
-    cands = []
-    for i in range(4, len(env) - 4):
-        if env[i] == env[max(0, i - 3):i + 4].min():
-            depth = min(env[max(0, i - 15):i].max(), env[i + 1:i + 16].max()) - env[i]
-            if depth > 0.15 * pk:
-                cands.append((depth, i))
-    sel = []
-    for dep, i in sorted(cands, reverse=True):
-        if len(sel) == nsyl - 1:
-            break
-        if all(abs(i - j) >= 6 for j in sel) and i > 5 and i < len(env) - 6:
-            sel.append(i)
-    if len(sel) < max(1, 0.6 * (nsyl - 1)):
-        return x
-    b = [0] + [i * h for i in sorted(sel)] + [len(x)]
-    d = np.diff(b).astype(float)
-    D = d.mean()
-    new = d ** (1 - EVEN_ALPHA) * D ** EVEN_ALPHA
-    new = np.clip(new, d * 0.6, d * 2.5)
-    new *= d.sum() / new.sum()
-    if np.abs(new / d - 1).max() < 0.08:
-        return x
-    dst = np.concatenate([[0], np.cumsum(new)]).round().astype(int)
-    try:
-        return rubberband_map(x, b, list(dst))
-    except Exception:
-        return x
+    if len(env) < 10:
+        return 1.0
+    pk = env.max(); on = int(np.argmax(env > 0.05 * pk)); top = 0
+    for i in range(on, len(env)):
+        top = max(top, env[i])
+        if env[i] < 0.3 * top and i - on > 3:
+            return (i - on) * 0.01
+    return 1.0
+
+FIRST_MIN = 0.11
 
 def render_units(cfg, units, st, rates):
     """Synthesize every unit on its own and return one audio array per unit."""
@@ -486,11 +449,8 @@ def render_units(cfg, units, st, rates):
         base = st.get('start_rate', st.get('rate', 1.0))
         r = round(base if u[5] else rates.get(i, base / u[6]), 2)
         x = trim_tail_hum(speak_clean(cfg, u[4], r))
-        if st['even'] and not u[5]:
-            t = tighten(x)
-            y = even_syllables(t, sum(u[3]))
-            x = y if tone_glitch(y) < GLITCH_S else t   # stretching a held vowel can itself ring
-        return x
+        # (Syllable-by-syllable time-stretching was tried and removed: listeners heard the voice wobble.)
+        return tighten(x) if st['even'] and not u[5] else x
     with ThreadPoolExecutor(WORKERS) as ex:
         return list(ex.map(one, range(len(units))))
 
@@ -500,10 +460,17 @@ def encode(y, path, st):
         filters.append(f"atempo={st['stretch']}")
     if st['echo']:
         filters.append('aecho=0.8:0.55:70|140:0.22|0.12')
-    filters.append('loudnorm=I=-18:TP=-2:LRA=7')
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'f32le', '-ar', str(SR), '-ac', '1', '-i', '-',
-                    '-af', ','.join(filters), '-ac', '1', '-c:a', 'libmp3lame', '-b:a', '64k', path],
-                   input=y.astype(np.float32).tobytes(), check=True)
+    # Loudness in two passes with one fixed gain (linear): single-pass loudnorm rides the gain and the voice wavers.
+    pcm = y.astype(np.float32).tobytes()
+    inp = ['-f', 'f32le', '-ar', str(SR), '-ac', '1', '-i', '-']
+    pre = ','.join(filters) + ',' if filters else ''
+    log = subprocess.run(['ffmpeg', '-hide_banner', '-nostats'] + inp + ['-af', pre + 'loudnorm=I=-18:TP=-2:LRA=11:print_format=json', '-f', 'null', '-'],
+                         input=pcm, capture_output=True).stderr.decode()
+    j = json.loads(log[log.rfind('{'):log.rfind('}') + 1])
+    norm = (f"loudnorm=I=-18:TP=-2:LRA=11:measured_I={j['input_i']}:measured_TP={j['input_tp']}:measured_LRA={j['input_lra']}"
+            f":measured_thresh={j['input_thresh']}:offset={j['target_offset']}:linear=true")
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error'] + inp + ['-af', pre + norm, '-ar', str(SR), '-ac', '1',
+                    '-c:a', 'libmp3lame', '-b:a', '96k', path], input=pcm, check=True)
 
 def assemble(path, units, segs, nlines, st):
     """Lay the units back to back with fixed pauses; return (cues, word anchors)."""
@@ -547,7 +514,7 @@ def main():
         from urllib.parse import urlparse
         u = urlparse(proxy)
         cfg.set_proxy(u.hostname, u.port or 80, u.username or '', u.password or '')
-    cfg.set_speech_synthesis_output_format(speechsdk.SpeechSynthesisOutputFormat.Audio24Khz96KBitRateMonoMp3)
+    cfg.set_speech_synthesis_output_format(speechsdk.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm)
 
     os.makedirs(OUT, exist_ok=True)
     man_path = os.path.join(OUT, 'manifest.json')
