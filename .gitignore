@@ -17,3 +17,4 @@ ios/DerivedData/
 xcuserdata/
 scripts/.tts-cache/
 __pycache__/
+scripts/.tts-cache-pcm/
