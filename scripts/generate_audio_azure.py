@@ -57,9 +57,9 @@ PRONOUNCE = {
     'พายัพรัสมิง': 'พายับ รัดสะหมิง',
     'ปฐวีรัสมิง': 'ปะถะวี รัดสะหมิง',
     'เมตตัมพุเสกะวิธินา': 'เมตตัม พุเส กะวิธินา',
-    'สัพพะโลกัสมิง': 'สัพพะโลกัส มิง',
+    'สัพพะโลกัสมิง': 'สัพพะโลกัด-สะ-หมิง',
     'อัพยาปัชโฌ': 'อับพะยาปัดโช',
-    'เอตัมมังคะละมุตตะมัง': 'เอตัม มังคะละ มุดตะมัง',
+    'เอตัมมังคะละมุตตะมัง': 'เอ-ตำ-มัง-คะ-ละ-มุด-ตะ-มัง',
     'อุเทตะยัญจักขุมา': 'อุเทตะ ยันจักขุมา',
     'พุทธะมะอะอุ': 'พุดทะ, มะ, อะ, อุ',
     'พุทธัสสะ': 'พุดทัดสะ',
@@ -69,16 +69,24 @@ PRONOUNCE = {
     'อะทินนาทานา': 'อะทินนา ทานา',
     'นิโรธเป็น': 'นิโรท เป็น',
     'อาฬวกสูตร': 'อาละวะกะสูด',
-    'ทุติยัมปิ': 'ทุติ ยัมปิ',
+    'อาฬวก': 'อาละวะกะ',
+    'โพชฌังโค': 'โพด-ชัง-โค',
+    'สะมาคะตัตโต': 'สะมาคะตัด-โต',
+    'อะนะนุสสุเตสุ': 'อะนะนุด-สุเตสุ',
+    'ญาณัญจะ': 'ยานัน-จะ',
+    'วิสุทธิชุติมิทธิพะกาภิธานัง': 'วิสุด-ทิ-ชุ-ติ-มิด-ทิ-พะ-กา-พิ-ทา-นัง',
+    'สักยานัง': 'สัก-กะ-ยา-นัง',
+    'จะตุปปะเทหิ': 'จะตุน-ปะ-เท-ฮิ',
+    'ทุติยัมปิ': 'ทุ-ติ-ยัม-ปิ',
     'หีนา': 'ฮีนา',
     'กาตุญจะ': 'กาตุนจะ',
     'กุสะลา': 'กุ สะลา',
-    'เหตุโปวะ': 'เห ตุ โปวะ',
+    'เหตุโปวะ': 'เห-ตุ-โป-วะ',
     'มหาสัปปุริสะสาวัง': 'มะหา สับปุริสะ สาวัง',
     'สัปปุริสะสาวัง': 'สับปุริสะ สาวัง',
     'โหนตุ': 'โหน ตุ',
     'โมกขัง': 'โมก ขัง',
-    'โสตถี': 'โสด ถี',
+    'โสตถี': 'โสด-ถี',
     'สิกขาปะทัง': 'สิก ขา ปะ ทัง',
     'ปิฏฐิภาคัสมิง': 'ปิดถิ พาคัดสะมิง',
     'สังฆัสสาหัสมิ': 'สังคัดสา หัดสะมิ',
@@ -98,7 +106,6 @@ PRONOUNCE = {
     'กัตวานะ': 'กัดตะวานะ',
     'ทุคคาหะทิฏฐิภุชะเคนะ': 'ทุกคาหะทิดถิพุชะเคนะ',
     'มานะสัมภาวะเย': 'มานะสำพาวะเย',
-    'จะตุปปะเทหิ': 'จะตุบปะเทฮิ',
     'ธัมมัง': 'ทำมัง',
     'บิดามารดา': 'บิดา มานดา',
     'มะหาเถรัง': 'มะหาเถ รัง',
@@ -138,10 +145,10 @@ PRONOUNCE = {
     'ขุททัง': 'ขุดทัง',
     'พรัหม': 'พรัมม',          # พรัหมัง → พรัม-มัง (and พรัหมะ…, like พรหมา)
     'ฤา': 'รือ',
-    'อัพยาปัชฌา': 'อัพพะยาปัดชา',
+    'อัพยาปัชฌา': 'อับ-พะ-ยา-ปัด-ชา',
     'ฏฐ': 'ดถ',               # ปะติฏฐาสิ → ปะ-ติด-ถา-สิ (must come before ฏ)
     'ฏ': 'ต',                  # สุปะฏิปันโน → สุ-ปะ-ติ-ปัน-โน
-    'โหตุ': 'โห, ตุ',          # a plain space still came out as โหด (same fix as โหมิ)
+    'โหตุ': 'โห-ตุ',          # hyphen: separate syllables without the comma's long โห (a space came out as โหด)
     'มารดา': 'มาน ดา',
     'โสตถ': 'โสดถ',            # โสตถี / โสตถิ
     'วินาศสันติ': 'วินาดสันติ',
@@ -576,8 +583,9 @@ def apply_reports(key_id, units):
     """Spots the listener reported: ringing / odd voice / held syllables get fresh takes (salted cache key);
     'too fast' / 'too slow' change that phrase's syllable length. Pronunciation is fixed in PRONOUNCE."""
     reps = json.load(open(FIXES, encoding='utf8')).get(key_id, []) if os.path.exists(FIXES) else []
-    units, UNIT_SALT_, fac = list(units), {}, {}
-    for n, wi, word, kind, note in reps:
+    units, UNIT_SALT_, fac = list(units), {}, {}   # fac[(unit, round)]: within a round the strongest wins, rounds multiply
+    for n, wi, word, kind, note, *rnd in reps:
+        rnd = rnd[0] if rnd else '|r4'   # each listening round gets its own fresh takes
         cand = [i for i, u in enumerate(units) if u[0] == n and wi in u[2]]
         if units and units[0][5] and word:   # talks: the text may have gained spaces; find the clause by its words
             cand = [i for i, u in enumerate(units) if u[0] == n and word[:6] in u[4].replace(' ', '')] or cand
@@ -594,10 +602,10 @@ def apply_reports(key_id, units):
             elif 'fast' in low or 'เร็ว' in low:
                 factor = 1.08 if little else 1.15
         if factor == 1.0:
-            UNIT_SALT_[i] = '|r4'
-        elif abs(factor - 1) > abs(fac.get(i, 1.0) - 1):   # several reports on one phrase: the strongest wins
-            fac[i] = factor
-    for i, f in fac.items():
+            UNIT_SALT_[i] = max(UNIT_SALT_.get(i, ''), rnd)
+        elif abs(factor - 1) > abs(fac.get((i, rnd), 1.0) - 1):
+            fac[(i, rnd)] = factor
+    for (i, _), f in fac.items():
         units[i] = units[i][:6] + (units[i][6] * f,)
     return units, UNIT_SALT_
 
