@@ -67,7 +67,10 @@ PRONOUNCE = {
     'อะหังปิตัง': 'อะหัง ปิตัง',
     'วูปะสะโม': 'วูปะ สะโม',
     'อะทินนาทานา': 'อะทินนา ทานา',
-    'นิโรธเป็น': 'นิโรท เป็น',
+    'นิโรธเป็น': 'นิโรด เป็น',
+    'ไม่มีเวร': 'ไม่มีเวน',
+    'นันทิวัฑฒะโน': 'นันทิ-วัด-ทะ-โน',
+    'สัพเพ สัตตา': 'สับ-เพ สัด-ตา',
     'อาฬวกสูตร': 'อาละวะกะสูด',
     'อาฬวก': 'อาละวะกะ',
     'โพชฌังโค': 'โพด-ชัง-โค',
@@ -84,10 +87,10 @@ PRONOUNCE = {
     'เหตุโปวะ': 'เห-ตุ-โป-วะ',
     'มหาสัปปุริสะสาวัง': 'มะหา สับปุริสะ สาวัง',
     'สัปปุริสะสาวัง': 'สับปุริสะ สาวัง',
-    'โหนตุ': 'โหน ตุ',
+    'โหนตุ': 'โหน-ตุ',
     'โมกขัง': 'โมก ขัง',
     'โสตถี': 'โสด-ถี',
-    'สิกขาปะทัง': 'สิก ขา ปะ ทัง',
+    'สิกขาปะทัง': 'สิก-ขา-ปะ-ทัง',
     'ปิฏฐิภาคัสมิง': 'ปิดถิ พาคัดสะมิง',
     'สังฆัสสาหัสมิ': 'สังคัดสา หัดสะมิ',
     # listener's review page, Nov 2026 (longer words first: a plain replace runs in this order)
@@ -107,7 +110,7 @@ PRONOUNCE = {
     'ทุคคาหะทิฏฐิภุชะเคนะ': 'ทุกคาหะทิดถิพุชะเคนะ',
     'มานะสัมภาวะเย': 'มานะสำพาวะเย',
     'ธัมมัง': 'ทำมัง',
-    'บิดามารดา': 'บิดา มานดา',
+    'บิดามารดา': 'บิดา มาน-ดา',
     'มะหาเถรัง': 'มะหาเถ รัง',
     'ฤๅ': 'รือ',
     'ชานามิ': 'ชา นามิ',
@@ -131,7 +134,7 @@ PRONOUNCE = {
     'อากาศรัสมิง': 'อากาด รัดสะหมิง',
     'รัสมิง': 'รัดสะหมิง',      # the other directions
     'ธาตุ': 'ทา ตุ',
-    'หุลู': 'หุ, ลู',          # keep ลู level (not หลู)
+    'หุลู': 'หุ-ลู',          # keep ลู level (not หลู); hyphen, not comma, so หุ is not swallowed
     'เวทะนาขันโธ': 'เวดทะนา ขันโธ',
     # listener's corrections, round 3 (words with ฏฐ first, before the general ฏฐ rule)
     'ปะติฏฐาสิ': 'ปะติดทาสิ',
@@ -149,7 +152,7 @@ PRONOUNCE = {
     'ฏฐ': 'ดถ',               # ปะติฏฐาสิ → ปะ-ติด-ถา-สิ (must come before ฏ)
     'ฏ': 'ต',                  # สุปะฏิปันโน → สุ-ปะ-ติ-ปัน-โน
     'โหตุ': 'โห-ตุ',          # hyphen: separate syllables without the comma's long โห (a space came out as โหด)
-    'มารดา': 'มาน ดา',
+    'มารดา': 'มาน-ดา',
     'โสตถ': 'โสดถ',            # โสตถี / โสตถิ
     'วินาศสันติ': 'วินาดสันติ',
     'พรหมา': 'พรัมมา',
@@ -583,7 +586,7 @@ def apply_reports(key_id, units):
     """Spots the listener reported: ringing / odd voice / held syllables get fresh takes (salted cache key);
     'too fast' / 'too slow' change that phrase's syllable length. Pronunciation is fixed in PRONOUNCE."""
     reps = json.load(open(FIXES, encoding='utf8')).get(key_id, []) if os.path.exists(FIXES) else []
-    units, UNIT_SALT_, fac = list(units), {}, {}   # fac[(unit, round)]: within a round the strongest wins, rounds multiply
+    units, UNIT_SALT_, fac, rang = list(units), {}, {}, {}   # fac[(unit, round)]: within a round the strongest wins, rounds multiply
     for n, wi, word, kind, note, *rnd in reps:
         rnd = rnd[0] if rnd else '|r4'   # each listening round gets its own fresh takes
         cand = [i for i, u in enumerate(units) if u[0] == n and wi in u[2]]
@@ -593,18 +596,25 @@ def apply_reports(key_id, units):
             continue
         i = cand[0]; low = note.lower()
         factor = 1.0
-        if kind == 'pron':
-            continue
+        if kind == 'ring':
+            rang.setdefault(i, set()).add(rnd)
         if kind == 'tempo' and 'ring' not in low:
             little = any(k in low for k in ('little', 'bit', 'นิด'))
             if 'slow' in low or 'ช้า' in low:
                 factor = 0.93 if little else 0.88
             elif 'fast' in low or 'เร็ว' in low:
                 factor = 1.08 if little else 1.15
+            elif 'short' in low or 'cannot hear' in low or 'สั้น' in low:
+                factor = 1.08                       # a syllable swallowed: give the phrase a little more time
+        if 'ยืด' in low:
+            factor = 0.92                           # drawn-out, stretched voice: read it a little quicker
         if factor == 1.0:
             UNIT_SALT_[i] = max(UNIT_SALT_.get(i, ''), rnd)
         elif abs(factor - 1) > abs(fac.get((i, rnd), 1.0) - 1):
             fac[(i, rnd)] = factor
+    for i, rounds in rang.items():   # still ringing after a fresh take: the voice is dragging the phrase, so quicken it
+        if len(rounds) >= 2 and (i, 'ring') not in fac:
+            fac[(i, 'ring')] = 0.93
     for (i, _), f in fac.items():
         units[i] = units[i][:6] + (units[i][6] * f,)
     return units, UNIT_SALT_
