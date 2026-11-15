@@ -42,18 +42,49 @@ TIGHTEN = (0.16, 0.07)     # inside a phrase, breaths longer than 0.16 s become 
 STYLES = {
     'lay':   dict(even=True, syl_ms=280, comma_ms=700, gap=1000, echo=False, start_rate=1.0),
     'monk':  dict(even=True, syl_ms=280, comma_ms=650, gap=880,  echo=True,  start_rate=1.0, stretch=0.88),
-    'topic': dict(even=False, rate=0.95, gap=900, echo=False),   # a touch slower: listeners found some words rushed
+    'topic': dict(even=False, rate=0.95, comma_ms=320, gap=900, echo=False),   # a touch slower: listeners found some words rushed
 }
 VOWELS = set('ะาิีึืุูัเแโไใำ')
 
 # How a word should sound when the written form misleads the voice (display text is unchanged).
 PRONOUNCE = {
     'ฆราวาสธรรม': 'คราวาดทำ',
-    'นิโรธเป็น': 'นิโรด เป็น',
+    # listener's review page, round 4 (Nov 15)
+    'โมคคัลลานัญจะ': 'โมกคันลานันจะ',
+    'ติณณันนัมปิ': 'ตินนันนัมปิ',
+    'พาหิรัชฌัตตุปัททะวา': 'พาหิรัด ชัดตุปัดทะวา',
+    'สัททัง': 'สัดทัง',
+    'พายัพรัสมิง': 'พายับ รัดสะหมิง',
+    'ปฐวีรัสมิง': 'ปะถะวี รัดสะหมิง',
+    'เมตตัมพุเสกะวิธินา': 'เมตตัม พุเส กะวิธินา',
+    'สัพพะโลกัสมิง': 'สัพพะโลกัส มิง',
+    'อัพยาปัชโฌ': 'อับพะยาปัดโช',
+    'เอตัมมังคะละมุตตะมัง': 'เอตัม มังคะละ มุดตะมัง',
+    'อุเทตะยัญจักขุมา': 'อุเทตะ ยันจักขุมา',
+    'พุทธะมะอะอุ': 'พุดทะ, มะ, อะ, อุ',
+    'พุทธัสสะ': 'พุดทัดสะ',
+    'สัมปะติจฉามิ': 'สำปะติดฉามิ',
+    'อะหังปิตัง': 'อะหัง ปิตัง',
+    'วูปะสะโม': 'วูปะ สะโม',
+    'อะทินนาทานา': 'อะทินนา ทานา',
+    'นิโรธเป็น': 'นิโรท เป็น',
+    'อาฬวกสูตร': 'อาละวะกะสูด',
+    'ทุติยัมปิ': 'ทุติ ยัมปิ',
+    'หีนา': 'ฮีนา',
+    'กาตุญจะ': 'กาตุนจะ',
+    'กุสะลา': 'กุ สะลา',
+    'เหตุโปวะ': 'เห ตุ โปวะ',
+    'มหาสัปปุริสะสาวัง': 'มะหา สับปุริสะ สาวัง',
+    'สัปปุริสะสาวัง': 'สับปุริสะ สาวัง',
+    'โหนตุ': 'โหน ตุ',
+    'โมกขัง': 'โมก ขัง',
+    'โสตถี': 'โสด ถี',
+    'สิกขาปะทัง': 'สิก ขา ปะ ทัง',
+    'ปิฏฐิภาคัสมิง': 'ปิดถิ พาคัดสะมิง',
+    'สังฆัสสาหัสมิ': 'สังคัดสา หัดสะมิ',
     # listener's review page, Nov 2026 (longer words first: a plain replace runs in this order)
     'อัพภุคคะโต': 'อับพุคคะโต',
     'พุทธัสสาหัสมิ': 'พุดทัสสาหัดสะมิ',
-    'สังฆัสสาหัสมิ': 'สังคัดสะหัดสะมิ',
     'โกณฑัญโญ': 'โกนทันโย',
     'โมคคัลลาโน': 'โมกคันลาโน',
     'ขันธะโมระปะริตตัญจะ': 'ขันธะโมระปะริดตันจะ',
@@ -75,11 +106,9 @@ PRONOUNCE = {
     'ชานามิ': 'ชา นามิ',
     'ชีวิตัง': 'ชีวิ ตัง',
     'ฉุฑโฑ': 'ฉุดทะโท',
-    'สิกขาปะทัง': 'สิกขา ปะทัง',
     'ตะติยัมปิ': 'ตะติ ยัมปิ',
     'วิริเยสุ': 'วิริ เยสุ',
     'นะมามิ': 'นะ มามิ',
-    'เหตุโปวะ': 'เหตุ โปวะ',
     'ฬ': 'ล',                   # จักกะวาฬะ → จัก-กะ-วา-ละ
     'วิญญูหีติ': 'วินยูฮีติ',
     'วิญญูหิ': 'วินยูฮิ',
@@ -98,7 +127,6 @@ PRONOUNCE = {
     'หุลู': 'หุ, ลู',          # keep ลู level (not หลู)
     'เวทะนาขันโธ': 'เวดทะนา ขันโธ',
     # listener's corrections, round 3 (words with ฏฐ first, before the general ฏฐ rule)
-    'ปิฏฐิภาคัสมิง': 'ปิดทิพาคัดสะ มิง',
     'ปะติฏฐาสิ': 'ปะติดทาสิ',
     'เอหิปัสสิโก': 'เอหิ ปัดสิโก',
     'หีโน': 'ฮีโน',
@@ -111,10 +139,10 @@ PRONOUNCE = {
     'พรัหม': 'พรัมม',          # พรัหมัง → พรัม-มัง (and พรัหมะ…, like พรหมา)
     'ฤา': 'รือ',
     'อัพยาปัชฌา': 'อัพพะยาปัดชา',
-    'ฏฐ': 'ตถ',               # ปะติฏฐาสิ → ปะ-ติด-ถา-สิ (must come before ฏ)
+    'ฏฐ': 'ดถ',               # ปะติฏฐาสิ → ปะ-ติด-ถา-สิ (must come before ฏ)
     'ฏ': 'ต',                  # สุปะฏิปันโน → สุ-ปะ-ติ-ปัน-โน
     'โหตุ': 'โห, ตุ',          # a plain space still came out as โหด (same fix as โหมิ)
-    'มารดา': 'มานดา',
+    'มารดา': 'มาน ดา',
     'โสตถ': 'โสดถ',            # โสตถี / โสตถิ
     'วินาศสันติ': 'วินาดสันติ',
     'พรหมา': 'พรัมมา',
@@ -143,7 +171,7 @@ def load_texts():
     return json.loads(js.stdout)
 
 # whole words only (a plain replace would also hit them inside longer words)
-EXACT = {'หิ': 'ฮิ', 'ทมะ': 'ทะมะ', 'นิโรธ': 'นิโรด'}   # นะ หิ ชาตุ → นะ ฮิ ชา ตุ
+EXACT = {'ทมะ': 'ทะมะ', 'นิโรธ': 'นิโรท'}   # (หิ→ฮิ dropped: the listener wants a plain หิ)   # นะ หิ ชาตุ → นะ ฮิ ชา ตุ
 
 def spoken_text(t):
     core = t.strip(',.;:')
@@ -179,7 +207,15 @@ def units_of(lines, even):
                     units.append((n, p, cur, weights, text, prose, factor))
                     p, cur = p + 1, []
         else:
-            units.append((n, 0, list(range(len(toks))), [syllables(spoken_text(t)) for t in toks], spoken_text(line), True, 1.0))
+            # one unit per clause (the text's spaces): the voice then cannot pause or drop words in odd places
+            # inside a long paragraph; clauses shorter than 8 letters join the next one.
+            p, cur = 0, []
+            for wi, raw in enumerate(toks):
+                cur.append(wi)
+                if len(''.join(toks[i] for i in cur)) >= 8 or wi == len(toks) - 1:
+                    units.append((n, p, cur, [max(1, len(toks[i]) // 3) for i in cur],
+                                  spoken_text(' '.join(toks[i] for i in cur)), True, 1.0))
+                    p, cur = p + 1, []
         n += 1
     return units, n
 
@@ -245,11 +281,11 @@ def split_units(x, count):
     edges = [lead] + [v for a, b in cut for v in (a, b)] + [tail]
     return [(edges[2 * i], edges[2 * i + 1]) for i in range(count)]
 
-def tighten(seg):
+def tighten(seg, limits=TIGHTEN):
     """Shorten the voice's own breaths inside one phrase so its words flow together."""
     out, last = [], 0
-    keep = int(TIGHTEN[1] * SR)
-    for a, b in silences(seg, TIGHTEN[0]):
+    keep = int(limits[1] * SR)
+    for a, b in silences(seg, limits[0]):
         if a == 0 or b >= len(seg):
             continue
         out.append(seg[last:a + keep // 2]); last = b - keep // 2
@@ -283,9 +319,9 @@ def trim(x, lead=0.06, tail=0.10):
     a = max(0, a - int(lead * SR)); b = min(len(x), b + int(tail * SR))
     return x[a:b] if b > a else x
 
-def speak(cfg, text, rate):
-    """One phrase → audio (cached by voice, rate and text)."""
-    key = hashlib.sha1(f'{VOICE}|{rate:.3f}|{text}|raw'.encode()).hexdigest()
+def speak(cfg, text, rate, salt=''):
+    """One phrase → audio (cached by voice, rate and text; a salt asks for fresh takes)."""
+    key = hashlib.sha1(f'{VOICE}|{rate:.3f}|{text}|raw{salt}'.encode()).hexdigest()
     path = os.path.join(CACHE, key + '.f32')
     if os.path.exists(path):   # the cache keeps the untouched take; trimming happens on load
         return trim(np.fromfile(path, dtype=np.float32))
@@ -357,22 +393,53 @@ GLITCH_S = 0.12
 SING_RANGE, SING_HOLD = 16.0, 0.35
 JITTER = [0, 0.01, -0.01, 0.02, -0.02, 0.03, -0.03, 0.04]
 glitch_log = []
+UNIT_SALT = {}   # unit index → salt for fresh takes (set per chant from the listener's reports)
 
 # Chants read like plain speech: each line in one go at the voice's own pace, with stricter
 # take selection (the listener picked this style for ศีล ๕ by ear: store/voice-test/sila5-A-whole-line.mp3)
 NATURAL = {'sila5'}
 STRICT = None   # set while rendering a NATURAL chant: (glitch, hold, range, extra jitter)
 
-def speak_clean(cfg, text, rate):
+def final_hold(x):
+    """Seconds the last syllable stays on one pitch (within 3%). Over ~0.15 s it is heard as a
+    ringing or musical note at the end of the phrase (listener reports, round 4)."""
+    n, h = int(0.04 * SR), int(0.01 * SR)
+    floor = 0.12 * float(np.sqrt((x ** 2).mean())) if len(x) else 0
+    f = []
+    for s in range(max(0, len(x) - int(1.2 * SR)), len(x) - n, h):
+        fr = x[s:s + n]
+        if np.sqrt((fr ** 2).mean()) < floor:
+            f.append(0); continue
+        fr = fr - fr.mean()
+        ac = np.correlate(fr, fr, 'full')[n - 1:]
+        lo, hi = SR // 350, SR // 60
+        k = lo + int(np.argmax(ac[lo:hi]))
+        f.append(SR / k if ac[0] > 0 and ac[k] / ac[0] > .5 else 0)
+    while f and f[-1] == 0:
+        f.pop()
+    run = []
+    for p in reversed(f):
+        if not p or (run and abs(p - np.median(run)) / np.median(run) > 0.03):
+            break
+        run.append(p)
+    return len(run) * 0.01
+
+FINAL_HOLD = 0.14
+
+def speak_clean(cfg, text, rate, salt='', prose=False):
     """speak(), retried at a hair's different speed while the take contains a pure-tone glitch."""
     best = None
     gl, sh, sr, extra = STRICT or (GLITCH_S - 0.01, SING_HOLD, SING_RANGE, [])
+    if prose:
+        sh = 0.28   # talks: a drawn-out syllable sounds odd (listener: ความ… นานไป)
     for d in JITTER + extra:
-        x = speak(cfg, text, round(rate + d, 2))
+        x = speak(cfg, text, round(rate + d, 2), salt)
         g = tone_glitch(x)
         rng, hold = sing_measure(x)
+        fh = final_hold(x)
         bad = (10 * max(0, g - gl) + 3 * max(0, hold - sh) + 0.1 * max(0, rng - sr)
-               + 20 * max(0, MUSIC_MIN - music_bed(x)) + 5 * max(0, FIRST_MIN - first_syllable(x)))
+               + 20 * max(0, MUSIC_MIN - music_bed(x)) + 5 * max(0, FIRST_MIN - first_syllable(x))
+               + 5 * max(0, fh - FINAL_HOLD))
         if best is None or bad < best[0]:
             best = (bad, x, g, rng, hold)
         if bad == 0:
@@ -442,17 +509,19 @@ def first_syllable(x):
 
 FIRST_MIN = 0.11
 
-def render_units(cfg, units, st, rates):
+def render_units(cfg, units, st, rates, idx=None):
     """Synthesize every unit on its own and return one audio array per unit."""
     def one(i):
         u = units[i]
         base = st.get('start_rate', st.get('rate', 1.0))
-        r = round(base if u[5] else rates.get(i, base / u[6]), 2)
-        x = trim_tail_hum(speak_clean(cfg, u[4], r))
+        r = round(base / u[6] if u[5] else rates.get(i, base / u[6]), 2)
+        x = trim_tail_hum(speak_clean(cfg, u[4], r, UNIT_SALT.get(i, ''), u[5]))
         # (Syllable-by-syllable time-stretching was tried and removed: listeners heard the voice wobble.)
-        return tighten(x) if st['even'] and not u[5] else x
+        if st['even'] and not u[5]:
+            return tighten(x)
+        return tighten(x, (0.25, 0.12)) if not st['even'] else x
     with ThreadPoolExecutor(WORKERS) as ex:
-        return list(ex.map(one, range(len(units))))
+        return list(ex.map(one, range(len(units)) if idx is None else idx))
 
 def encode(y, path, st):
     filters = []
@@ -501,6 +570,37 @@ def assemble(path, units, segs, nlines, st):
     k = 1 / st.get('stretch', 1.0)
     return [round((c or 0) * k, 2) for c in cues], [[[wi, round(tt * k, 2)] for wi, tt in la] for la in anchors]
 
+FIXES = os.path.join(ROOT, 'scripts', 'review-fixes.json')   # listener's reports: {id: [[line, word, text, kind, note]]}
+
+def apply_reports(key_id, units):
+    """Spots the listener reported: ringing / odd voice / held syllables get fresh takes (salted cache key);
+    'too fast' / 'too slow' change that phrase's syllable length. Pronunciation is fixed in PRONOUNCE."""
+    reps = json.load(open(FIXES, encoding='utf8')).get(key_id, []) if os.path.exists(FIXES) else []
+    units, UNIT_SALT_, fac = list(units), {}, {}
+    for n, wi, word, kind, note in reps:
+        cand = [i for i, u in enumerate(units) if u[0] == n and wi in u[2]]
+        if units and units[0][5] and word:   # talks: the text may have gained spaces; find the clause by its words
+            cand = [i for i, u in enumerate(units) if u[0] == n and word[:6] in u[4].replace(' ', '')] or cand
+        if not cand:
+            continue
+        i = cand[0]; low = note.lower()
+        factor = 1.0
+        if kind == 'pron':
+            continue
+        if kind == 'tempo' and 'ring' not in low:
+            little = any(k in low for k in ('little', 'bit', 'นิด'))
+            if 'slow' in low or 'ช้า' in low:
+                factor = 0.93 if little else 0.88
+            elif 'fast' in low or 'เร็ว' in low:
+                factor = 1.08 if little else 1.15
+        if factor == 1.0:
+            UNIT_SALT_[i] = '|r4'
+        elif abs(factor - 1) > abs(fac.get(i, 1.0) - 1):   # several reports on one phrase: the strongest wins
+            fac[i] = factor
+    for i, f in fac.items():
+        units[i] = units[i][:6] + (units[i][6] * f,)
+    return units, UNIT_SALT_
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--only', default='', help='comma-separated ids to regenerate')
@@ -536,6 +636,8 @@ def main():
                 slot = 'lay' if sname == 'topic' else sname
                 fname = (key_id.replace(':', '-') + '.mp3') if sname == 'topic' else f'{key_id}-{sname}.mp3'
                 units, nlines = units_of(lines, st['even'])
+                units, salts = apply_reports(key_id, units)
+                UNIT_SALT.clear(); UNIT_SALT.update(salts)
                 global STRICT
                 STRICT = None
                 if key_id in NATURAL and st['even']:   # one unit per line, natural pace
@@ -587,6 +689,22 @@ def main():
                         w = sum(u[3]) * st['syl_ms'] / 1000 * u[6]
                         if u[6] > 1 and not u[5] and len(segs[i]) / SR < w * 0.93:
                             segs[i] = stretch_seg(segs[i], max(0.75, len(segs[i]) / SR / w))
+                # a take much shorter than its text needs has dropped a word or a whole sentence: re-take it
+                wt = [sum(u[3]) * (u[6] if not u[5] else 1) for u in units]
+                for prose in (True, False):
+                    ids = [i for i, u in enumerate(units) if u[5] == prose and len(segs[i])]
+                    if len(ids) < 3:
+                        continue
+                    med = float(np.median([len(segs[i]) / SR / wt[i] for i in ids]))
+                    short = [i for i in ids if len(segs[i]) / SR / wt[i] < 0.65 * med and sum(units[i][3]) >= 3]
+                    if short:
+                        for i in short:
+                            UNIT_SALT[i] = UNIT_SALT.get(i, '') + '|len'
+                        again = render_units(cfg, units, st, rates, short)
+                        for i, sg in zip(short, again):
+                            if len(sg) > len(segs[i]):
+                                segs[i] = sg
+                        note += f' · re-took {len(short)} short'
                 if sname == 'lay':
                     lay_segs = segs
                 cues, anchors = assemble(os.path.join(OUT, fname), units, segs, nlines, st)
