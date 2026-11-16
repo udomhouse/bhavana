@@ -68,6 +68,10 @@ PRONOUNCE = {
     'วูปะสะโม': 'วูปะ สะโม',
     'อะทินนาทานา': 'อะทินนา ทานา',
     'นิโรธเป็น': 'นิโรด เป็น',
+    'หิงสิ': 'หิง-สิ',
+    'มุนินโท': 'มุ-นิน-โท',
+    'ปัญจะสัตตะ': 'ปัญจะ สัตตะ',
+    'เสนียดจัญไร': 'สะเหนียด จันไร',
     'ไม่มีเวร': 'ไม่มีเวน',
     'นันทิวัฑฒะโน': 'นันทิ-วัด-ทะ-โน',
     'สัพเพ สัตตา': 'สับ-เพ สัด-ตา',
@@ -110,7 +114,7 @@ PRONOUNCE = {
     'ทุคคาหะทิฏฐิภุชะเคนะ': 'ทุกคาหะทิดถิพุชะเคนะ',
     'มานะสัมภาวะเย': 'มานะสำพาวะเย',
     'ธัมมัง': 'ทำมัง',
-    'บิดามารดา': 'บิดา มาน-ดา',
+    'บิดามารดา': 'บิดา มาน ดา',
     'มะหาเถรัง': 'มะหาเถ รัง',
     'ฤๅ': 'รือ',
     'ชานามิ': 'ชา นามิ',
@@ -134,7 +138,7 @@ PRONOUNCE = {
     'อากาศรัสมิง': 'อากาด รัดสะหมิง',
     'รัสมิง': 'รัดสะหมิง',      # the other directions
     'ธาตุ': 'ทา ตุ',
-    'หุลู': 'หุ-ลู',          # keep ลู level (not หลู); hyphen, not comma, so หุ is not swallowed
+    'หุลู': 'หุ ลู',          # keep ลู level (not หลู); comma and hyphen both drew ลู out
     'เวทะนาขันโธ': 'เวดทะนา ขันโธ',
     # listener's corrections, round 3 (words with ฏฐ first, before the general ฏฐ rule)
     'ปะติฏฐาสิ': 'ปะติดทาสิ',
@@ -152,7 +156,7 @@ PRONOUNCE = {
     'ฏฐ': 'ดถ',               # ปะติฏฐาสิ → ปะ-ติด-ถา-สิ (must come before ฏ)
     'ฏ': 'ต',                  # สุปะฏิปันโน → สุ-ปะ-ติ-ปัน-โน
     'โหตุ': 'โห-ตุ',          # hyphen: separate syllables without the comma's long โห (a space came out as โหด)
-    'มารดา': 'มาน-ดา',
+    'มารดา': 'มาน ดา',
     'โสตถ': 'โสดถ',            # โสตถี / โสตถิ
     'วินาศสันติ': 'วินาดสันติ',
     'พรหมา': 'พรัมมา',
@@ -189,6 +193,7 @@ def spoken_text(t):
         t = t.replace(core, EXACT[core])
     t = t.replace('ฯ', '').replace('ฺ', '').replace('-', ' ')   # phinthu confuses the voice; ยะ-ธา-พุท is read per syllable
     t = re.sub(r'[;:()"“”]', ' ', t)
+    t = re.sub(r'(เล็ก|บ่อย|ค่อย|เฉย|ช้า|ยาว|นาน|ดี) ๆ', r'\1 \1', t)   # spaced ไม้ยมก in the talks: เรื่องเล็ก ๆ → เรื่องเล็ก เล็ก
     t = re.sub(r'(\S+?)ๆ', r'\1 \1', t)   # ไม้ยมก: เพ็งๆ → เพ็ง เพ็ง
     for a, b in PRONOUNCE.items():
         t = t.replace(a, b)
@@ -222,7 +227,7 @@ def units_of(lines, even):
             p, cur = 0, []
             for wi, raw in enumerate(toks):
                 cur.append(wi)
-                if len(''.join(toks[i] for i in cur)) >= 8 or wi == len(toks) - 1:
+                if (len(''.join(toks[i] for i in cur)) >= 8 and toks[min(wi + 1, len(toks) - 1)] != 'ๆ') or wi == len(toks) - 1:
                     units.append((n, p, cur, [max(1, len(toks[i]) // 3) for i in cur],
                                   spoken_text(' '.join(toks[i] for i in cur)), True, 1.0))
                     p, cur = p + 1, []
