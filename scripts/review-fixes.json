@@ -3171,6 +3171,14 @@
 "ring",
 "ringing towards the end",
 "|r7"
+],
+[
+81,
+16,
+"",
+"ring",
+"scan: pure tone 0.16s",
+"|r8"
 ]
 ],
 "chumnum": [
