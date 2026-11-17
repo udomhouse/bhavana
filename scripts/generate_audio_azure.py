@@ -144,7 +144,7 @@ PRONOUNCE = {
     'อากาศรัสมิง': 'อากาด รัดสะหมิง',
     'รัสมิง': 'รัดสะหมิง',      # the other directions
     'ธาตุ': 'ทา ตุ',
-    'หุลู': 'หุ ลู',          # keep ลู level (not หลู); comma and hyphen both drew ลู out
+    'หุลู': 'ฮุ ลู',          # listener's pick (sample 5); หุ ลู came out หุลู้
     'เวทะนาขันโธ': 'เวดทะนา ขันโธ',
     # listener's corrections, round 3 (words with ฏฐ first, before the general ฏฐ rule)
     'ปะติฏฐาสิ': 'ปะติดทาสิ',
@@ -173,8 +173,10 @@ SLOWER = {
     'อุชุปะฏิปันโน': 1.2,
     'โย วาจะโน ทินะทิเน': 1.2,
     'พุทธะมะอะอุ': 1.2,
+    'ฮุ ลู': 1.2,               # the หุลู run is its own phrase (SPLIT_BEFORE); listener wants it slower
     'ตะติยัมปิ ธัมมัง': 1.2,
 }
+SPLIT_BEFORE = {'หุลู'}   # start a new phrase here even without a comma, so it can be paced on its own
 TONE_MARKS = set('่้๊๋์')
 
 def is_thai_prose(text):
@@ -217,7 +219,7 @@ def units_of(lines, even):
             p, cur = 0, []
             for wi, raw in enumerate(toks):
                 cur.append(wi)
-                if raw.endswith(',') or wi == len(toks) - 1:
+                if raw.endswith(',') or wi == len(toks) - 1 or (toks[wi + 1] in SPLIT_BEFORE and raw not in SPLIT_BEFORE):
                     words = [spoken_text(toks[i]).strip(',.') for i in cur]
                     ws = [w for w in words if w]
                     # a run of one-syllable words (โส โส สะ สะ อะ …): the voice drops some unless each is set apart
