@@ -144,7 +144,7 @@ PRONOUNCE = {
     'อากาศรัสมิง': 'อากาด รัดสะหมิง',
     'รัสมิง': 'รัดสะหมิง',      # the other directions
     'ธาตุ': 'ทา ตุ',
-    'หุลู': 'ฮุ ลู',          # listener's pick (sample 5); หุ ลู came out หุลู้
+    'หุลู': 'หุ่ลู',          # listener's pick (sample E): short low หุ, longer ลู
     'เวทะนาขันโธ': 'เวดทะนา ขันโธ',
     # listener's corrections, round 3 (words with ฏฐ first, before the general ฏฐ rule)
     'ปะติฏฐาสิ': 'ปะติดทาสิ',
@@ -173,9 +173,10 @@ SLOWER = {
     'อุชุปะฏิปันโน': 1.2,
     'โย วาจะโน ทินะทิเน': 1.2,
     'พุทธะมะอะอุ': 1.2,
-    'ฮุ ลู': 1.2,               # the หุลู run is its own phrase (SPLIT_BEFORE); listener wants it slower
     'ตะติยัมปิ ธัมมัง': 1.2,
 }
+# Phrases the listener approved from a sample: same text, rate and (empty) salt → the very same cached take.
+PINNED = {'หุ่ลู หุ่ลู หุ่ลู สะวาหายะ': 0.78}
 SPLIT_BEFORE = {'หุลู'}   # start a new phrase here even without a comma, so it can be paced on its own
 TONE_MARKS = set('่้๊๋์')
 
@@ -538,7 +539,10 @@ def render_units(cfg, units, st, rates, idx=None):
         u = units[i]
         base = st.get('start_rate', st.get('rate', 1.0))
         r = round(base / u[6] if u[5] else rates.get(i, base / u[6]), 2)
-        x = trim_tail_hum(speak_clean(cfg, u[4], r, UNIT_SALT.get(i, ''), u[5]))
+        salt = UNIT_SALT.get(i, '')
+        if u[4] in PINNED:
+            r, salt = PINNED[u[4]], ''
+        x = trim_tail_hum(speak_clean(cfg, u[4], r, salt, u[5]))
         # (Syllable-by-syllable time-stretching was tried and removed: listeners heard the voice wobble.)
         if st['even'] and not u[5]:
             return tighten(x)
