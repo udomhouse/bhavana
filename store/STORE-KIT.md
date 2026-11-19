@@ -26,7 +26,7 @@ Bhāvanā (ภาวนา) หนังสือสวดมนต์สำห�
 🙏 บทสวดครบ พร้อมเสียงสวด
 • บทสวดกว่า ๓๐ บท เช่น อิติปิโส ชินบัญชร พาหุง กรณียเมตตสูตร ธัมมจักกัปปวัตตนสูตร ยอดพระกัณฑ์ไตรปิฎก คาถาเงินล้าน คาถามหาจักรพรรดิ
 • เสียงสวดชัด จังหวะสม่ำเสมอ ไฮไลต์ทีละคำให้สวดตาม
-• เลือกได้ทั้งสวดปกติ และสวดช้าก้องแบบในโบสถ์ ปรับความเร็วและขนาดตัวอักษรได้
+• ปรับความเร็วเสียงสวดและขนาดตัวอักษรได้ ล็อกจอแล้วเสียงยังเล่นต่อ
 
 📿 ชุดบทสวดพร้อมใช้
 ทำวัตรเช้า ทำวัตรเย็น ขึ้นบ้านใหม่ ทำบุญบ้าน อุทิศส่วนกุศล กรวดน้ำ และขอพรให้หายป่วย
@@ -68,7 +68,7 @@ Premium (จ่ายครั้งเดียว ใช้ได้ตลอ�
 Bhāvanā is a Thai Buddhist chanting book for lay people — as easy to follow as chanting with a leader.
 
 • 30+ chants with clear audio and word-by-word highlighting: Itipiso, Jinapañjara, Bāhuṃ, Karaṇīya Metta Sutta, Dhammacakkappavattana Sutta and more
-• Normal or slow, temple-style chanting; adjustable speed and text size
+• Adjustable chanting speed and text size; audio keeps playing with the screen locked
 • Ready-made sets: morning and evening chanting, house blessing, merit dedication and more
 • Choose chants by how you feel, by blessing, or by the time you have
 • Praylist: build your own set — the app puts it in the correct chanting order

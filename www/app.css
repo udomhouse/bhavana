@@ -176,7 +176,7 @@ input[type=range]{width:100%;accent-color:var(--sky)}
 .ln.note{font-family:var(--f-body);font-size:calc(var(--fs) * .62);color:var(--ink2);opacity:.9}
 .ln.act{opacity:1;background:var(--hl)}
 .ln.past{opacity:.75}
-.ln .w{transition:color .25s,background-size .35s;border-radius:4px;background:linear-gradient(var(--mark),var(--mark)) no-repeat 0 85%/0 40%}
+.ln .w{display:inline-block;max-width:100%;transition:color .25s,background-size .35s;border-radius:4px;background:linear-gradient(var(--mark),var(--mark)) no-repeat 0 85%/0 40%}
 .ln.act .w{color:var(--fg2)}
 .ln.act .w.done{color:var(--fg)}
 .ln.act .w.on{color:var(--fg);background-size:100% 40%;font-weight:600}
