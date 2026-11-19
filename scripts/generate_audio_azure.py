@@ -70,7 +70,7 @@ PRONOUNCE = {
     'นิโรธเป็น': 'นิโรด เป็น',
     'เพียร': 'เพียน',
     'อิสิปตนมฤคทายวัน': 'อิสิปะตะนะมะริคคะทายะวัน',
-    'สมุทัย': 'สะหมุทัย',
+    'สมุทัย': 'สะ-หมุ-ทัย',
     'สะหัสสะมะภินิมมิตะสาวุธันตัง': 'สะหัสสะมะภินิมมิตะ สาวุธันตัง',
     'ขอส่วนบุญนี้': 'ขอส่วนบุญนี้ ',      # the Thai dedication lines: pause where the listener reads one
     'จงสำเร็จแก่บิดามารดา': 'จงสำเร็จแก่ บิดา มาน ดา',
@@ -178,7 +178,7 @@ SLOWER = {
     'ตะติยัมปิ ธัมมัง': 1.2,
 }
 # Phrases the listener approved from a sample: same text, rate and (empty) salt → the very same cached take.
-PINNED = {'หุ่ลู หุ่ลู หุ่ลู สะวาหายะ': 0.78}
+PINNED = {'หุ่ลู หุ่ลู หุ่ลู สะวาหายะ': (0.78, '')}   # text → (rate, salt)
 SPLIT_BEFORE = {'หุลู'}   # start a new phrase here even without a comma, so it can be paced on its own
 TONE_MARKS = set('่้๊๋์')
 
@@ -543,7 +543,7 @@ def render_units(cfg, units, st, rates, idx=None):
         r = round(base / u[6] if u[5] else rates.get(i, base / u[6]), 2)
         salt = UNIT_SALT.get(i, '')
         if u[4] in PINNED:
-            r, salt = PINNED[u[4]], ''
+            r, salt = PINNED[u[4]]
         x = trim_tail_hum(speak_clean(cfg, u[4], r, salt, u[5]))
         # (Syllable-by-syllable time-stretching was tried and removed: listeners heard the voice wobble.)
         if st['even'] and not u[5]:
