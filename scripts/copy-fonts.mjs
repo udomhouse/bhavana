@@ -1,5 +1,5 @@
 // Copies the Thai/Latin font files from @fontsource into www/fonts so the app works fully offline.
-import { mkdirSync, copyFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
 const OUT = 'www/fonts';
 mkdirSync(OUT, { recursive: true });
 const THAI = 'U+02D7, U+0303, U+0331, U+0E01-0E5B, U+200C-200D, U+25CC';
@@ -19,11 +19,17 @@ for (const [family, pkg, weights, style, subsets] of faces) {
     css += `@font-face{font-family:"${family}";font-style:${style};font-weight:${w};font-display:swap;src:url(${file}) format("woff2");unicode-range:${range}}\n`;
   }
 }
-// ChulaNarak (TEPC freeware): copied unchanged as .ttf — its licence does not allow converting the file
-for (const [file, w] of [['ChulaNarak-Regular.ttf', 400], ['ChulaNarak-Bold.ttf', 700]]) {
-  copyFileSync(`fonts-src/chulanarak/${file}`, `${OUT}/${file}`);
-  css += `@font-face{font-family:"ChulaNarak";font-style:normal;font-weight:${w};font-display:swap;src:url(${file}) format("truetype")}\n`;
+// ChulaNarak (TEPC freeware): selling the app needs TEPC's written permission, so it stays out until that arrives.
+// Once permitted: set this to true and put "ChulaNarak", before "Noto Serif Thai" in --f-chant (www/app.css).
+const USE_CHULANARAK = false;
+for (const f of ['ChulaNarak-Regular.ttf', 'ChulaNarak-Bold.ttf', 'ChulaNarak-LICENSE.txt']) rmSync(`${OUT}/${f}`, { force: true });
+if (USE_CHULANARAK) {
+  // copied unchanged as .ttf — its licence does not allow converting the file
+  for (const [file, w] of [['ChulaNarak-Regular.ttf', 400], ['ChulaNarak-Bold.ttf', 700]]) {
+    copyFileSync(`fonts-src/chulanarak/${file}`, `${OUT}/${file}`);
+    css += `@font-face{font-family:"ChulaNarak";font-style:normal;font-weight:${w};font-display:swap;src:url(${file}) format("truetype")}\n`;
+  }
+  copyFileSync('fonts-src/chulanarak/LICENSE.txt', `${OUT}/ChulaNarak-LICENSE.txt`);
 }
-copyFileSync('fonts-src/chulanarak/LICENSE.txt', `${OUT}/ChulaNarak-LICENSE.txt`);
 writeFileSync(`${OUT}/fonts.css`, css);
 console.log('fonts copied to', OUT);

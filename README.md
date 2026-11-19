@@ -250,9 +250,9 @@ AZURE_SPEECH_KEY=<KEY 1> AZURE_SPEECH_REGION=southeastasia python3 scripts/gener
 
 ## ฟอนต์
 
-- ตัวบทสวดและคำอธิบายธรรมะใช้ฟอนต์ **ChulaNarak** (จุฬาน่ารัก) ของชมรมการพิมพ์อิเล็กทรอนิกส์ไทย (TEPC) ออกแบบโดย จักรินทร์ สิงห์หนู ไฟล์อยู่ใน `fonts-src/chulanarak/` และเป็นไฟล์ต้นฉบับที่ไม่ได้แก้ไข
-- สัญญาอนุญาตเป็น freeware คือใช้ฟรี แจกต่อได้ถ้าไม่แก้ไฟล์ แต่ **การเผยแพร่เชิงพาณิชย์ต้องได้รับอนุญาตเป็นลายลักษณ์อักษรจาก TEPC** (tepclub@tepclub.com) รายละเอียดอยู่ใน `fonts-src/chulanarak/LICENSE.txt`
-- ฟอนต์ส่วนอื่นของแอป (Mitr, Anuphan, Noto Serif Thai, Cormorant Garamond) ใช้สัญญาอนุญาต SIL Open Font License ใช้เชิงพาณิชย์ได้
+- ตัวบทสวดและคำอธิบายธรรมะใช้ฟอนต์ **Noto Serif Thai** (SIL Open Font License)
+- เดิมใช้ **ChulaNarak** (จุฬาน่ารัก) ของ TEPC แต่การเผยแพร่เชิงพาณิชย์ต้องได้รับอนุญาตเป็นลายลักษณ์อักษรจาก TEPC (tepclub@tepclub.com) ก่อน จึงถอดออกจากแอปไว้ระหว่างรออนุญาต ไฟล์ต้นฉบับยังอยู่ใน `fonts-src/chulanarak/` ถ้าได้รับอนุญาต ให้คัดลอกตั้ง `USE_CHULANARAK = true` ใน `scripts/copy-fonts.mjs` แล้วใส่ `"ChulaNarak",` หน้า `"Noto Serif Thai"` ใน `--f-chant` ของ `www/app.css`
+- ฟอนต์ส่วนอื่นของแอป (Mitr, Anuphan, Cormorant Garamond) ใช้สัญญาอนุญาต SIL Open Font License ใช้เชิงพาณิชย์ได้
 
 ## ข้อควรรู้
 

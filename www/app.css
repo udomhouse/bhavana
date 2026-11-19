@@ -16,7 +16,7 @@ input,textarea,select{font-size:16px!important}   /* iPhone zooms into fields sm
   --f-display:"Mitr","Anuphan",system-ui,sans-serif;
   --f-latin:"Cormorant Garamond",Georgia,serif;
   --f-body:"Anuphan",-apple-system,"Segoe UI",system-ui,sans-serif;
-  --f-chant:"ChulaNarak","Noto Serif Thai",Georgia,serif;
+  --f-chant:"Noto Serif Thai",Georgia,serif;
   --r:18px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){

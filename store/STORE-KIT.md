@@ -151,7 +151,7 @@ Notifications are local (holy-day and streak reminders), requested from a button
 - [ ] สร้างสินค้า `premium_lifetime` ในทั้งสองร้านแล้ว
 - [ ] App Store: สร้าง Non-Consumable `trial_7day` ราคา Free ชื่อ "7-day Trial" (Google Play ไม่ต้องสร้าง แอปจะเริ่มทดลองใช้ในเครื่องเอง)
 - [x] เวอร์ชันแอป: ครั้งแรกใช้ 1.0.0 (build 1) ครั้งต่อไปต้องเพิ่มเลข build ทุกครั้ง
-- [ ] ได้รับอนุญาตใช้ฟอนต์ ChulaNarak จาก TEPC (หรือเปลี่ยนเป็น Krub ก่อน)
+- [x] ฟอนต์ตัวบท: ใช้ Noto Serif Thai ไปก่อน (ChulaNarak รอ TEPC อนุญาต ค่อยใส่กลับในอัปเดตถัดไป)
 
 ## 7. ภาพสำหรับหน้าร้าน (`store/screenshots/`)
 - `ios-6.9-1…6.png`: iPhone 6.9 นิ้ว 1320×2868 ใช้ได้กับทุกขนาด iPhone
