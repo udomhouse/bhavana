@@ -550,7 +550,7 @@ def render_units(cfg, units, st, rates, idx=None):
         # (Syllable-by-syllable time-stretching was tried and removed: listeners heard the voice wobble.)
         if st['even'] and not u[5]:
             return tighten(x)
-        return tighten(x, (0.25, 0.12)) if not st['even'] else x
+        return tighten(x, (0.25, 0.12))   # Thai prose, in talks and inside chants alike: no long pauses mid-phrase
     with ThreadPoolExecutor(WORKERS) as ex:
         return list(ex.map(one, range(len(units)) if idx is None else idx))
 
