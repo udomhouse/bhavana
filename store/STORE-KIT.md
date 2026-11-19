@@ -146,11 +146,11 @@ Notifications are local (holy-day and streak reminders), requested from a button
 ```
 
 ## 6. ก่อนกด Build ส่ง Store ✅
-- [ ] `www/config.js` แก้ `testMode: true` เป็น `testMode: false` (ปิดปุ่มเปิด Premium ทดสอบ)
+- [x] `www/config.js` แก้ `testMode: true` เป็น `testMode: false` (ปิดปุ่มเปิด Premium ทดสอบ)
 - [x] อีเมลติดต่อ: admin@udom-bhavana.com (ใส่ใน Privacy Policy, Review Notes และแอปแล้ว)
 - [ ] สร้างสินค้า `premium_lifetime` ในทั้งสองร้านแล้ว
 - [ ] App Store: สร้าง Non-Consumable `trial_7day` ราคา Free ชื่อ "7-day Trial" (Google Play ไม่ต้องสร้าง แอปจะเริ่มทดลองใช้ในเครื่องเอง)
-- [ ] เวอร์ชันแอป: ครั้งแรกใช้ 1.0.0 (build 1) ครั้งต่อไปต้องเพิ่มเลข build ทุกครั้ง
+- [x] เวอร์ชันแอป: ครั้งแรกใช้ 1.0.0 (build 1) ครั้งต่อไปต้องเพิ่มเลข build ทุกครั้ง
 - [ ] ได้รับอนุญาตใช้ฟอนต์ ChulaNarak จาก TEPC (หรือเปลี่ยนเป็น Krub ก่อน)
 
 ## 7. ภาพสำหรับหน้าร้าน (`store/screenshots/`)

@@ -7,5 +7,5 @@ window.BHAVANA_CONFIG = {
   supabaseAnonKey: 'sb_publishable_DK_-gxitQydKdE83V3AScg__4Ozeeiv',
   // Test mode: shows a switch in Settings that turns Premium on without buying. ⚠️ Set to false before
   // sending a build to the App Store / Google Play.
-  testMode: true,
+  testMode: false,
 };
