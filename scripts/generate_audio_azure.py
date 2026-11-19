@@ -180,7 +180,10 @@ SLOWER = {
 # Phrases the listener approved from a sample: same text, rate and (empty) salt → the very same cached take.
 PINNED = {'หุ่ลู หุ่ลู หุ่ลู สะวาหายะ': (0.78, ''),   # text → (rate, salt)
           'อะนุตตะรัง สิระสา นะ มามิ': (0.89, '|p1'),
-          'เมตตัม พุเส กะวิธินา ชิตะวา มุ-นิน-โท': (0.85, '|p1')}
+          'เมตตัม พุเส กะวิธินา ชิตะวา มุ-นิน-โท': (0.85, '|p1'),
+          'สัพพะธัมมานุภาเวนะ สะทา โสดถี ภะวันตุ เต': (0.85, '|p2'),
+          'อิมินา ปุญญะกัมเมนะ อิมินา อุททิเสนะ จะ': (0.89, '|p1'),
+          'อิทธิบาท': (0.95, '|p3')}
 SPLIT_BEFORE = {'หุลู'}   # start a new phrase here even without a comma, so it can be paced on its own
 TONE_MARKS = set('่้๊๋์')
 
