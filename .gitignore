@@ -1,5 +1,6 @@
 node_modules/
 www/fonts/
+www/capacitor.js
 .DS_Store
 # Android
 android/.gradle/

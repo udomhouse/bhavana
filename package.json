@@ -6,7 +6,8 @@
   "scripts": {
     "fonts": "node scripts/copy-fonts.mjs",
     "assets": "npx @capacitor/assets generate --iconBackgroundColor '#14275A' --iconBackgroundColorDark '#070F24' --splashBackgroundColor '#14275A' --splashBackgroundColorDark '#070F24'",
-    "sync": "npm run fonts && npx cap sync",
+    "core": "node scripts/copy-core.mjs",
+    "sync": "npm run fonts && npm run core && npx cap sync",
     "android": "npm run sync && npx cap open android",
     "ios": "npm run sync && npx cap open ios"
   },
